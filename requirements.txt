@@ -1,0 +1,7 @@
+nvidia-pyindex
+torch
+torchvision
+opencv-python
+pandas
+google-colab
+tensorflow
