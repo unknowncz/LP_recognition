@@ -109,12 +109,12 @@ if __name__ == '__main__':
     # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 
-    # train()
+    train()
 
 
     # test the model
 
-    test()
+    # test()
 
 
 
