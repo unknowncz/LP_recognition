@@ -1,6 +1,6 @@
-# License Plates > Original License Plates
-https://public.roboflow.ai/object-detection/license-plates-us-eu
+# Google Licence Plates > 2022-12-02 12:54pm
+https://universe.roboflow.com/aaaaaaaaaa-67qhw/google-licence-plates
 
-Provided by [Roboflow](https://roboflow.com)
-License: Public Domain
+Provided by a Roboflow user
+License: CC BY 4.0
 
