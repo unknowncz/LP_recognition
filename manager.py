@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import time
+import os
 
 import worker
 
@@ -61,16 +62,28 @@ class workerHandler:
     def kill(self):
         self._process.kill()
 
-    def __del__(self):
+    def __delete__(self):
         self.kill()
 
 
 if __name__ == "__main__":
-    t = taskDistributor(2)
-    im = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\000f52302c1341eb_jpg.rf.aee8f06b336f83868708a3591d4100b4.jpg")
+    t = taskDistributor(1)
+    files = [f for f in os.listdir(f"{__file__}\\..\\LP_Detection\\train")]
+    print(len(files))
+    # im = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\000f52302c1341eb_jpg.rf.aee8f06b336f83868708a3591d4100b4.jpg")
+    i = 0
+    print(len(files))
     while True:
-        t.addTask(worker.Task(x:=random.randint(100, 10000), im))
+        if not files[i].endswith(".jpg"):
+            i+1
+            continue
+        im = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\{files[i]}")
+        if t.addTask(worker.Task(i, im)):
+            print(f"Added task {i}")
+            i += 1
+            if i >= len(files)-2: break
+        del im
         t.distribute()
+    while True:
         if t.out.qsize():
             print(t.out.get())
-        time.sleep(0.2)

@@ -21,9 +21,10 @@ class Worker:
 
     def run(self):
         while True:
-            task:task = self._Qrecv.get()
+            task:Task = self._Qrecv.get()
             img, *pos = anrp(task.data)
             text = get_text(img, self.reader)
+            del img
             self._Qsend.put(Task(id=task.id, data=text), block=False)
 
 
@@ -41,8 +42,10 @@ def anrp(img):
             new_img = img[y:y + h, x:x + w]
             break
     # return the cropped image
+    if not 'new_img' in locals():
+        return img, 0, 0, img.shape[1], img.shape[0]
 
-    return new_img, x, y
+    return new_img, x, y, w, h
 
 def get_text(img, reader: easyocr.Reader):
     img = np.asarray(img)
@@ -55,7 +58,7 @@ def get_text(img, reader: easyocr.Reader):
 if __name__ == '__main__':
     READER = easyocr.Reader(['en'])
     p1 = time.process_time()
-    im, x, y = anrp(cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\000f52302c1341eb_jpg.rf.aee8f06b336f83868708a3591d4100b4.jpg"))
+    im, *pos = anrp(cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\000f52302c1341eb_jpg.rf.aee8f06b336f83868708a3591d4100b4.jpg"))
     p2 = time.process_time()
     r = get_text(im, READER)
     p3 = time.process_time()
