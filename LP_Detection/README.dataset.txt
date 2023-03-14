@@ -1,4 +1,4 @@
-# Google Licence Plates > 2022-12-02 12:54pm
+# Google Licence Plates > 2023-02-15 6:45pm
 https://universe.roboflow.com/aaaaaaaaaa-67qhw/google-licence-plates
 
 Provided by a Roboflow user

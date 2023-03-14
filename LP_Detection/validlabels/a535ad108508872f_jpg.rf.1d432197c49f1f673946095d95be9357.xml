@@ -1,0 +1,27 @@
+<annotation>
+	<folder></folder>
+	<filename>a535ad108508872f_jpg.rf.1d432197c49f1f673946095d95be9357.jpg</filename>
+	<path>a535ad108508872f_jpg.rf.1d432197c49f1f673946095d95be9357.jpg</path>
+	<source>
+		<database>roboflow.ai</database>
+	</source>
+	<size>
+		<width>1024</width>
+		<height>768</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>0</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<occluded>0</occluded>
+		<bndbox>
+			<xmin>120</xmin>
+			<xmax>148</xmax>
+			<ymin>582</ymin>
+			<ymax>598</ymax>
+		</bndbox>
+	</object>
+</annotation>
