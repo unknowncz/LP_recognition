@@ -93,98 +93,62 @@ class GUImgr:
         # |     button       |                               |
         # |     button       |                               |
         # |     button       |         cam_settings          |
-        # |                  |                               |
+        # |    add camera    |                               |
         # |                  |                               |
         # |   back_button    |                               |
         # |------------------|-------------------------------|
 
         # add a vertical layout for the buttons as the first item in the layout
         layout = QtWidgets.QHBoxLayout()
-        cambutton_layout = QtWidgets.QVBoxLayout()
+        self.cambutton_layout = QtWidgets.QVBoxLayout()
         centerwidget = self.centralwidgets['cameramanager']
         centerwidget.setLayout(layout)
         
         # create a button for all the cameras
         # the camera names are stored in the config file
-        cambuttons = [QtWidgets.QPushButton(f'Camera {str(i)}') for i in range(int(self.config['GENERAL']['num_cameras']))]
-        for i, j in enumerate(cambuttons):
-            cambutton_layout.addWidget(j)
-            j.clicked.connect(lambda: self.camdetails(i))
-        cambutton_layout.addStretch()
+        self.cambuttons = [QtWidgets.QPushButton(f'Camera {str(i)}') for i in range(int(self.config['GENERAL']['num_cameras']))]
+        for i, j in enumerate(self.cambuttons):
+            self.cambutton_layout.addWidget(j)
+        
+        # add the add camera button
+        self.cambuttons += [QtWidgets.QPushButton('Add Camera')]
+        self.cambutton_layout.addWidget(self.cambuttons[-1])
+        self.cambuttons[-1].clicked.connect(self.addcamera)
+        self.cambutton_layout.addStretch()
 
         # add the back button
-        cambuttons += [QtWidgets.QPushButton('Back')]
-        cambutton_layout.addWidget(cambuttons[-1])
-        cambuttons[-1].clicked.connect(self.resetContent)
+        self.cambuttons += [QtWidgets.QPushButton('Back')]
+        self.cambutton_layout.addWidget(self.cambuttons[-1])
+        self.cambuttons[-1].clicked.connect(self.resetContent)
         helperwidget = QtWidgets.QWidget()
         helperwidget.setMinimumWidth(200)
         helperwidget.setMaximumWidth(200)
-        helperwidget.setLayout(cambutton_layout)
+        helperwidget.setLayout(self.cambutton_layout)
         centerwidget.layout().addWidget(helperwidget)
 
         # add the camera settings to the layout
-        self.camsettings = QtWidgets.QStackedWidget()
-        self.camsettings.setMinimumWidth(500)
-        self.camsettingpages:list[QtWidgets.QWidget] = []
-        self.camsettings.addWidget(q:=QtWidgets.QLabel("Select a camera to view its details"))
-        self.camsettingpages.append(q)
+        self.camerawidget = QtWidgets.QStackedWidget()
+
+        # add the default text
+        self.camerawidget.addWidget(QtWidgets.QLabel('Select a camera to view its settings'))
+
+        self.camerawidget.setMinimumWidth(500)
+        self.cameras = []
         for i in range(int(self.config['GENERAL']['num_cameras'])):
-            widget = QtWidgets.QWidget()
-            layout = QtWidgets.QVBoxLayout()
-            widget.setLayout(layout)
-            title = QtWidgets.QLabel(f"Camera {i}")
-            # title.setMaximumHeight(50)
-            layout.addWidget(title)
-            for j in ['IP', 'Port', 'Login', 'Password']:
-                self._addWidgetPair(j, QtWidgets.QLineEdit(self.config[f'CAM_{i}'][j]), layout)
-            layout.addStretch()
-            self.camsettings.addWidget(widget)
-            self.camsettingpages.append(widget)
-        
-        centerwidget.layout().addWidget(self.camsettings)
-        
-        self.camsettings.setCurrentIndex(0)
+            # add a camera for each camera in the config file
+            self.cameras.append(Camera(self.config, i, self, self.cambuttons[i]))
+            self.camerawidget.addWidget(self.cameras[-1])
+        self.camerawidget.setCurrentIndex(0)
 
-        # add the internals of the camera settings
-        # |-------------------------------------------------|
-        # |   Cam id:   {id}                                |
-        # |                                                 |
-        # |   IP:       {ip}                                |
-        # |   Port:     {port}                              |
-        # |   Login:    {field}                             |
-        # |   Password: {field}                             |
-        # |                                                 |
-        # |   [Live feed]                 [Reset] [Apply]   |
-        # |                                                 |
-        # |-------------------------------------------------|
-        
-        # add the layout to the widgets
+        centerwidget.layout().addWidget(self.camerawidget)
 
-        self.feedmgr = utils.FeedManager(self.logger)
-
-        def get_lower_btns(id=0):
-            lower_buttons = QtWidgets.QHBoxLayout()
-            funcs = [lambda: self.feedmgr.add({**self.config[f'CAM_{id}']}|{'id':id}), self.resetCamSettings, self.applyCamSettings]
-            for i, btn_label in enumerate(['Live Feed', 'Reset', 'Apply']):
-                btn = QtWidgets.QPushButton(btn_label)
-                if i == 1:
-                    lower_buttons.addStretch()
-                btn.clicked.connect(funcs[i])
-                lower_buttons.addWidget(btn)
-            return lower_buttons
-
-        for i, j in enumerate(self.camsettingpages[1:]):
-            w = QtWidgets.QWidget()
-            w.setLayout(get_lower_btns())
-            j.layout().addWidget(w)
-
-        
+        self.feedmgr = utils.FeedManager(self.logger) 
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
         # idk what to do here yet
 
         exit(self.app.exec())
-    
+
     def settingswindow(self):
         # make a new window if the settings button is clicked and the window is not already open
         if type(window:=self.subwindows.get('settings', None)) == utils.SubWindow:
@@ -195,7 +159,7 @@ class GUImgr:
             return
         window = utils.SubWindow(title="Settings")
         window.setMinimumSize(500, 250)
-        
+
         layout = QtWidgets.QVBoxLayout(window)
         layout.addWidget(QtWidgets.QLabel("Settings"))
         # window.centralWidget.setLayout(layout)
@@ -203,7 +167,7 @@ class GUImgr:
         window.show()
 
     def camdetails(self, camid):
-        self.camsettings.setCurrentIndex(camid+1)
+        self.camerawidget.setCurrentIndex(camid+1)
         # self.camsettings.setText(f"Camera {camid+1}")
 
     def cameramgr(self):
@@ -214,30 +178,154 @@ class GUImgr:
 
     def resetContent(self):
         self.cw.setCurrentWidget(self.centralwidgets['main'])
-        self.camsettings.setCurrentIndex(0)
-
+        self.camerawidget.setCurrentIndex(0)
 
     def _addWidgetPair(self, label, widget, layout):
         l = QtWidgets.QHBoxLayout()
         l.addWidget(QtWidgets.QLabel(label))
         l.addWidget(widget)
         layout.addLayout(l)
+    
+    def addcamera(self):
+        # add a new camera to the config file
+        # this will also add a new section to the config file
+        # the new section will be named CAM_{num_cameras}
+        # the new section will have the following options
 
-    def resetCamSettings(self):
-        # reset the camera settings to the values in the config file
+        # create a new section
+        self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin'}
+        # update the number of cameras
+        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])+1)
+
+        # apply the current camera config
+        if self.camerawidget.currentIndex() != 0:
+            self.camerawidget.currentWidget().apply()
+
+        # create a new camera object
+        self.cambuttons.insert(-2, QtWidgets.QPushButton(f'Camera {str(int(self.config["GENERAL"]["num_cameras"])-1)}'))
+        self.cambutton_layout.insertWidget(len(self.cambuttons)-3, self.cambuttons[-3])
+        self.cameras.append(Camera(self.config, int(self.config["GENERAL"]["num_cameras"])-1, self, self.cambuttons[-3]))
+        self.camerawidget.addWidget(self.cameras[-1])
+        self.camerawidget.setCurrentIndex(len(self.cameras))
+        # apply the new camera config
+        self.cameras[-1].apply()
+
+    def deletecamera(self, id):
+        # delete the camera with the given id
+
+        # remove the camera from the config file
+        # update the number of cameras
+        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)   
+        # move all sections with a higher id down one 
+        for i in range(id, int(self.config['GENERAL']['num_cameras'])):
+            self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
+                # self.cameras[i].updateId(i-1)
+                # self.config.remove_section(f'CAM_{i+1}')    
+
+        self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
+        # remove the last camera from the camera list
+        self.cameras[-1].button.deleteLater()
+        self.cameras.pop()
+        # apply the current camera config
+        for i in range(int(self.config['GENERAL']['num_cameras'])):
+            self.cameras[i].updateId(i)
+            self.cameras[i].reset()  
         
+        # remove the last camera from the camera list
+        # remove the camera button
+        self.cambutton_layout.removeWidget(self.cambuttons.pop(-3))
+        # reset the current camera
+        self.camerawidget.setCurrentIndex(0)
 
-    def applyCamSettings(self):
-        # apply the camera settings to the config file
-        # and to the camera manager
-        # then save the config file
-        for i, j in enumerate(self.camsettingpages[1:]):
-            for k in j.children():
-                if type(k) == QtWidgets.QLineEdit:
-                    self.config[f'CAM_{i}'][k.text()] = k.text()
+        # write the config file
+        for i in range(int(self.config['GENERAL']['num_cameras'])):
+            self.cameras[i].apply()
 
     def kill(self):
         self.app.exit()
+
+class Camera(QtWidgets.QWidget):
+    def __init__(self, config:configparser.ConfigParser, id, manager:GUImgr, button:QtWidgets.QPushButton):
+        super().__init__()
+        self.config = config
+        self.id = id
+        self.manager = manager
+        self.button = button
+        self.button.clicked.connect(lambda: self.manager.camdetails(self.id))
+        # create the layout according to this
+        # # add the internals of the camera settings
+        # # |-------------------------------------------------|
+        # # |   Cam id:   {id}                                |
+        # # |                                                 |
+        # # |   IP:       {ip}                                |
+        # # |   Port:     {port}                              |
+        # # |   Login:    {field}                             |
+        # # |   Password: {field}                             |
+        # # |                                                 |
+        # # |   [Delete camera]                               |
+        # # |   empty line                                    |
+        # # |   [Live feed]                 [Reset] [Apply]   |
+        # # |                                                 |
+        # # |-------------------------------------------------|
+
+        # add the title
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.title = QtWidgets.QLabel(f"Camera {id}")
+        self.layout.addWidget(self.title)
+        # add the inputs
+        self.inputs = {}
+        for i in ['IP', 'Port', 'Login', 'Password']:
+            w = QtWidgets.QLineEdit()
+            self.inputs |= {i:w}
+            l = QtWidgets.QHBoxLayout()
+            self._addWidgetPair(i, w, l)
+            self.layout.addLayout(l)
+            self.inputs |= {i:w}
+        self.reset()
+        # add the delete button
+        deletebutton = QtWidgets.QPushButton("Delete camera", clicked=lambda: self.manager.deletecamera(id))
+        self.layout.addStretch()
+        self.layout.addWidget(deletebutton)
+        # add the empty line
+        self.layout.addWidget(QtWidgets.QLabel(''))
+        # add the live feed button
+        self.layout.addLayout(self.get_lower_btns())
+        self.setLayout(self.layout)
+
+    def _addWidgetPair(self, label, widget, layout):
+        # add a label and a widget to the layout
+        l = QtWidgets.QLabel(label)
+        l.setFixedWidth(100)
+        layout.addWidget(l)
+        layout.addWidget(widget)
+
+    def get_lower_btns(self):
+        # get the lower buttons
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feed(self.id)))
+        layout.addStretch()
+        layout.addWidget(QtWidgets.QPushButton("Reset", clicked=self.reset))
+        layout.addWidget(QtWidgets.QPushButton("Apply", clicked=self.apply))
+        return layout
+    
+    def reset(self):
+        # reset the inputs to the config file
+        for k, v in self.inputs.items():
+            v.setText(self.config[f'CAM_{self.id}'][k])
+
+    def apply(self):
+        # apply the inputs to the config file
+        for i in self.inputs:
+            self.config[f'CAM_{self.id}'][i] = self.inputs[i].text()
+        self.config.write(open(f'{__file__}\\..\\config.ini', 'w'), True)
+        self.reset()
+
+    def updateId(self, id):
+        # change the id of the camera in all the necessary places
+        self.id = id
+        self.title.setText(f"Camera {id}")
+        self.button.clicked.connect(lambda: self.manager.camdetails(self.id))
+
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s — %(levelname)s — %(message)s", level=logging.DEBUG)

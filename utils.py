@@ -13,7 +13,6 @@ import threading
 import logging.handlers
 import logging
 import asyncio
-import time
 
 
 @dataclass
@@ -97,7 +96,7 @@ class FeedManager:
         asyncio.run(t())
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         t.cancel()
-
+    
         while True:
             ret, frame = cap.read()
             if ret:
@@ -120,7 +119,7 @@ class Timeout:
         await asyncio.sleep(self.timeout)
         if not self.canceled:
             self.callback(self.target, self.cfg)
-
+        
     def cancel(self):
         self.canceled = True
 
