@@ -160,7 +160,7 @@ if __name__ == '__main__':
     detector = utils.Detector(f'{__file__}\\..\\saved_model\\saved_model')
     import matplotlib.pyplot as plt
 
-    img = cv2.imread(f"{__file__}\\..\\test16.jpg")
+    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\00d763761e47f723_jpg.rf.d730edd1f70faf90c6bb817837445b17.jpg")
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     cv2.imshow('img', img)
     cv2.waitKey(0)
