@@ -14,7 +14,7 @@ class GUImgr:
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{__file__}\\..\\config.ini')
-        
+
         self.subwindows = {}
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget()}
         self.centralwidgets.setdefault('main', self.centralwidgets['main'])
@@ -57,7 +57,7 @@ class GUImgr:
         for i in buttons:
             button_layout.addWidget(i)
         button_layout.addStretch()
-        
+
         # add a bottom row of buttons
         button_layout2 = QtWidgets.QHBoxLayout()
         button_layout.addLayout(button_layout2)
@@ -66,8 +66,8 @@ class GUImgr:
         buttons2[0].clicked.connect(self.settingswindow)
         for i in buttons2:
             button_layout2.addWidget(i)
-        
-        
+
+
         # create an unwriteable text box for the logger output
         self.loggerout = QtWidgets.QTextEdit()
         self.loggerout.setReadOnly(True)
@@ -103,13 +103,13 @@ class GUImgr:
         self.cambutton_layout = QtWidgets.QVBoxLayout()
         centerwidget = self.centralwidgets['cameramanager']
         centerwidget.setLayout(layout)
-        
+
         # create a button for all the cameras
         # the camera names are stored in the config file
         self.cambuttons = [QtWidgets.QPushButton(f'Camera {str(i)}') for i in range(int(self.config['GENERAL']['num_cameras']))]
         for i, j in enumerate(self.cambuttons):
             self.cambutton_layout.addWidget(j)
-        
+
         # add the add camera button
         self.cambuttons += [QtWidgets.QPushButton('Add Camera')]
         self.cambutton_layout.addWidget(self.cambuttons[-1])
@@ -142,7 +142,7 @@ class GUImgr:
 
         centerwidget.layout().addWidget(self.camerawidget)
 
-        self.feedmgr = utils.FeedManager(self.logger) 
+        self.feedmgr = utils.FeedManager(self.logger)
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
         # idk what to do here yet
@@ -185,7 +185,7 @@ class GUImgr:
         l.addWidget(QtWidgets.QLabel(label))
         l.addWidget(widget)
         layout.addLayout(l)
-    
+
     def addcamera(self):
         # add a new camera to the config file
         # this will also add a new section to the config file
@@ -215,12 +215,12 @@ class GUImgr:
 
         # remove the camera from the config file
         # update the number of cameras
-        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)   
-        # move all sections with a higher id down one 
+        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
+        # move all sections with a higher id down one
         for i in range(id, int(self.config['GENERAL']['num_cameras'])):
             self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
                 # self.cameras[i].updateId(i-1)
-                # self.config.remove_section(f'CAM_{i+1}')    
+                # self.config.remove_section(f'CAM_{i+1}')
 
         self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
         # remove the last camera from the camera list
@@ -229,8 +229,8 @@ class GUImgr:
         # apply the current camera config
         for i in range(int(self.config['GENERAL']['num_cameras'])):
             self.cameras[i].updateId(i)
-            self.cameras[i].reset()  
-        
+            self.cameras[i].reset()
+
         # remove the last camera from the camera list
         # remove the camera button
         self.cambutton_layout.removeWidget(self.cambuttons.pop(-3))
@@ -302,12 +302,12 @@ class Camera(QtWidgets.QWidget):
     def get_lower_btns(self):
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feed(self.id)))
+        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.add(self.id)))
         layout.addStretch()
         layout.addWidget(QtWidgets.QPushButton("Reset", clicked=self.reset))
         layout.addWidget(QtWidgets.QPushButton("Apply", clicked=self.apply))
         return layout
-    
+
     def reset(self):
         # reset the inputs to the config file
         for k, v in self.inputs.items():

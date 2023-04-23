@@ -4,7 +4,7 @@ import configparser
 import logging
 from logging.handlers import QueueHandler, QueueListener
 import cv2
-
+import paddleocr
 
 import utils
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     REQUIRED = config['GENERAL']['MODULES'].split(', ') + []
     utils.check_modules(REQUIRED)
-    
+
 
     with open(f"{__file__}\\..\\lp.csv", "r") as f:
         VALIDLP = (i.strip() for i in f.readlines())

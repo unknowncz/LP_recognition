@@ -7,7 +7,7 @@ from subprocess import check_call
 from sys import executable
 from pkg_resources import working_set
 import tensorflow as tf
-from numpy import array, int64
+import numpy as np
 import cv2
 import threading
 import logging.handlers
@@ -40,12 +40,18 @@ class Detector:
     def __init__(self, path:str, *args, **kwargs):
         try:
             self.model = tf.saved_model.load(path, *args, **kwargs)
+            self.wrappedmodel = tf.keras.Sequential()
+            self.wrappedmodel.add(tf.keras.layers.Lambda(lambda x: self.model(x)['detection_boxes']))
         except OSError:
             print('Unable to load model')
             self.model = lambda x:x
+            self.wrappedmodel = lambda x:x
+
+        self.wrappedmodel.compile()
+        self.wrappedmodel.stop_training = True
 
     def __call__(self, img):
-        image_np = array(img)
+        image_np = np.array(img)
         input_tensor = tf.convert_to_tensor(image_np)
         input_tensor = input_tensor[tf.newaxis, ...]
         detections = self.model(input_tensor)
@@ -96,7 +102,7 @@ class FeedManager:
         asyncio.run(t())
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         t.cancel()
-    
+
         while True:
             ret, frame = cap.read()
             if ret:
@@ -119,7 +125,7 @@ class Timeout:
         await asyncio.sleep(self.timeout)
         if not self.canceled:
             self.callback(self.target, self.cfg)
-        
+
     def cancel(self):
         self.canceled = True
 
@@ -132,7 +138,6 @@ def crop_image(img, detections, threshold=0.5):
             ymin, xmin, ymax, xmax = boxes[i]
             x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
             return img[y1:y2, x1:x2]
-    return img
 
 def check_modules(required:list[str], logger=logging.getLogger()):
     '''Check if required modules are installed, if not, attempt to install them'''
