@@ -122,14 +122,3 @@ def crop_image(img, detections, threshold=0.5):
             x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
             return img[y1:y2, x1:x2]
 
-def check_modules(required:list[str], logger=logging.getLogger()):
-    '''Check if required modules are installed, if not, attempt to install them'''
-    INSTALLED = {*(pkg.key for pkg in working_set if pkg.key)}
-    if MISSING:=[m for m in required if m.lower() not in INSTALLED]:
-        if len(MISSING) > 1:
-            logger.warning(f'MISSING MODULES {", ".join(MISSING)}. ATTEMPTING AUTO-IMPORT')
-        else:
-            logger.warning(f'MISSING MODULE {MISSING[0]}. ATTEMPTING AUTO-IMPORT')
-        PYTHON = executable
-        check_call([PYTHON, '-m', 'pip', 'install', '--upgrade', *(MISSING + [])])
-

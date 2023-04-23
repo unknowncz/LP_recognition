@@ -4,8 +4,9 @@ import configparser
 import logging
 from logging.handlers import QueueHandler, QueueListener
 import cv2
-
-import utils
+import sys
+import subprocess
+from pkg_resources import working_set
 
 # TODO:
 #  - GUI - config control, camera control, worker control
@@ -23,7 +24,15 @@ if __name__ == "__main__":
 
 
     REQUIRED = config['GENERAL']['MODULES'].split(', ') + []
-    utils.check_modules(REQUIRED)
+    '''Check if required modules are installed, if not, attempt to install them'''
+    INSTALLED = {*(pkg.key for pkg in working_set if pkg.key)}
+    if MISSING:=[m for m in REQUIRED if m.lower() not in INSTALLED]:
+        if len(MISSING) > 1:
+            logger.warning(f'MISSING MODULES {", ".join(MISSING)}. ATTEMPTING AUTO-IMPORT')
+        else:
+            logger.warning(f'MISSING MODULE {MISSING[0]}. ATTEMPTING AUTO-IMPORT')
+        PYTHON = sys.executable
+        subprocess.check_call([PYTHON, '-m', 'pip', 'install', '--upgrade', *(MISSING + [])])
 
 
     with open(f"{__file__}\\..\\lp.csv", "r") as f:
@@ -31,6 +40,7 @@ if __name__ == "__main__":
 
     logger.info("Starting main process")
 
+import utils
 
 import worker
 import camera
