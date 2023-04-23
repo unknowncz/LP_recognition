@@ -4,7 +4,6 @@ import configparser
 import logging
 from logging.handlers import QueueHandler, QueueListener
 import cv2
-import paddleocr
 
 import utils
 

@@ -147,7 +147,8 @@ class GUImgr:
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
         # idk what to do here yet
 
-        exit(self.app.exec())
+        self.app.exec()
+        self.kill()
 
     def settingswindow(self):
         # make a new window if the settings button is clicked and the window is not already open
@@ -302,7 +303,9 @@ class Camera(QtWidgets.QWidget):
     def get_lower_btns(self):
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.add(self.id)))
+        cfg = {'id':self.id}|{k:v for k, v in self.config.items(f'CAM_{self.id}')}
+        print(cfg)
+        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop()))
         layout.addStretch()
         layout.addWidget(QtWidgets.QPushButton("Reset", clicked=self.reset))
         layout.addWidget(QtWidgets.QPushButton("Apply", clicked=self.apply))

@@ -12,7 +12,6 @@ import cv2
 import threading
 import logging.handlers
 import logging
-import asyncio
 
 
 @dataclass
@@ -76,33 +75,34 @@ class SubWindow(QWidget):
 class FeedManager:
     def __init__(self, logger=logging.getLogger(), *args, **kwargs):
         self.cams = {}
-        self.threads = {}
+        self.thread = None
         self.logger = logger
 
-    def add(self, camcfg:dict):
-        self.cams[str(camcfg['id'])] = camcfg
-        self.threads[str(camcfg['id'])] = threading.Thread(target=self.livefeed_thread, args=(camcfg,))
-        self.threads[str(camcfg['id'])].start()
+    def start(self, camcfg:dict):
+        self.cam = camcfg
+        self.thread = threading.Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
+        self.thread.start()
         self.logger.info(f'Camera {camcfg["id"]} feed started')
 
-    def remove(self, camcfg:dict):
-        self.cams.pop(str(camcfg['id']))
-        self.threads[str(camcfg['id'])].stop()
-        self.threads.pop(str(camcfg['id']))
-        self.logger.info(f'Camera {camcfg["id"]} feed stopped')
+    def stop(self):
+        self.cam = {}
+        cv2.destroyAllWindows()
+        self.thread.join()
+        self.thread = None
 
-    def timedOut(self, thread:threading.Thread, camcfg:dict):
+    def timedOut(self, camcfg:dict):
         self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
-        thread.stop()
-        self.remove(camcfg)
+        self.stop()
 
     def livefeed_thread(self, camcfg:dict):
-        # self.threads[str(camcfg['id'])]
-        t = Timeout(self.threads[str(camcfg['id'])], camcfg, 10)
-        asyncio.run(t())
+        # cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
+        # capture the video from the camera with a timeout of 5 seconds
+        # if the camera connects, the timeout is cancelled
+        timer = threading.Timer(5, self.timedOut, args=(camcfg,))
+        timer.start()
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
-        t.cancel()
-
+        timer.cancel()
+        self.logger.info(f'Camera {camcfg["id"]} feed connected')
         while True:
             ret, frame = cap.read()
             if ret:
@@ -111,23 +111,6 @@ class FeedManager:
                 self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
                 break
         cap.release()
-        self.remove(camcfg)
-
-class Timeout:
-    def __init__(self, cfg, target, timeout, callback=lambda *x:None):
-        self.target = target
-        self.timeout = timeout
-        self.callback = callback
-        self.canceled = False
-        self.cfg = cfg
-
-    async def __call__(self, *args, **kwargs):
-        await asyncio.sleep(self.timeout)
-        if not self.canceled:
-            self.callback(self.target, self.cfg)
-
-    def cancel(self):
-        self.canceled = True
 
 
 def crop_image(img, detections, threshold=0.5):
