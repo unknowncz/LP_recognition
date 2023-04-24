@@ -62,7 +62,7 @@ if __name__ == '__main__':
     print("-------------------")
     detector = utils.Detector(f'{__file__}\\..\\saved_model\\saved_model')
 
-    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\4a71f2d037c2af0b_jpg.rf.4e2d6ddd617d92cd766575c9ad97bef3.jpg")
+    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\00f220d92e7681e7_jpg.rf.91242ad651c16705909c3ccde3eb6713.jpg")
     # img = cv2.imread(f"{__file__}\\..\\test17.jpg")
 
     # cv2.imshow('img', img)
@@ -70,14 +70,17 @@ if __name__ == '__main__':
     p1 = time.process_time()
     detections = detector(img)
     # crop the image to the number plate with the highest confidence
-    im = utils.crop_image(img, detections)
-
     p2 = time.process_time()
 
-    r = get_text(im)
+    im = utils.crop_image(img, detections)
+
     p3 = time.process_time()
-    print(f"Time taken to crop image: {p2 - p1}")
-    print(f"Time taken to get text: {p3 - p2}")
+
+    r = get_text(im)
+    p4 = time.process_time()
+    print(f"Time taken to get detections from image: {p2 - p1}")
+    print(f"Time taken to crop image: {p3 - p2}")
+    print(f"Time taken to get text: {p4 - p3}")
     print(r)
 
     # gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
