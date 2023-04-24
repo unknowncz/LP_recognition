@@ -12,6 +12,7 @@ import cv2
 import threading
 import logging.handlers
 import logging
+import time
 
 
 @dataclass
@@ -77,40 +78,60 @@ class FeedManager:
         self.cams = {}
         self.thread = None
         self.logger = logger
+        self.stop_feed = False
 
     def start(self, camcfg:dict):
         self.cam = camcfg
+        self.stop_feed = False
         self.thread = threading.Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
-        self.thread.start()
         self.logger.info(f'Camera {camcfg["id"]} feed started')
+        self.thread.start()
 
     def stop(self):
         self.cam = {}
+        self.stop_feed = True
+        # self.thread.join()
+        self.logger.info(f'Camera {self.cam["id"]} feed stopped')
         cv2.destroyAllWindows()
-        self.thread.join()
         self.thread = None
-
-    def timedOut(self, camcfg:dict):
-        self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
-        self.stop()
 
     def livefeed_thread(self, camcfg:dict):
         # cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         # capture the video from the camera with a timeout of 5 seconds
         # if the camera connects, the timeout is cancelled
-        timer = threading.Timer(5, self.timedOut, args=(camcfg,))
-        timer.start()
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
-        timer.cancel()
-        self.logger.info(f'Camera {camcfg["id"]} feed connected')
+        stream_ok = True
         while True:
-            ret, frame = cap.read()
-            if ret:
-                cv2.imshow(f'Camera {camcfg["id"]}', frame)
+            try:
+                if not cap.isOpened():
+                    self.logger.warning(f'Camera {camcfg["id"]} feed stopped - failed to connect')
+                ret, frame = cap.read()
+                if self.stop_feed:
+                    break
+                if ret:
+                    frame_ok = True
+                    cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
+                else:
+                    self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
+                    frame_ok = False
+            except cv2.error:
+                self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
+            if stream_ok:
+                if not frame_ok:
+                # start of missing video
+                    stream_ok = False
+                    no_frame_start_time = time.time()
             else:
-                self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
-                break
+                if not frame_ok:
+                # still no video
+                    if time.time() - no_frame_start_time > 5:
+                        self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
+                        break
+                else:
+                # video restarted
+                    stream_ok = True
         cap.release()
+        cv2.destroyAllWindows()
 
 
 def crop_image(img, detections, threshold=0.5):
