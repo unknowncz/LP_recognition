@@ -109,10 +109,13 @@ class FeedManager:
                 if self.stop_feed:
                     break
                 if ret:
+                    if not stream_ok:
+                        self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
                     cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
                 else:
-                    self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
+                    if frame_ok:
+                        self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
                     frame_ok = False
             except cv2.error:
                 self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
