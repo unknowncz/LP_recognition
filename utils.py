@@ -101,24 +101,27 @@ class FeedManager:
         # if the camera connects, the timeout is cancelled
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         stream_ok = True
+        frame_ok = True
         while True:
             try:
                 if not cap.isOpened():
                     self.logger.warning(f'Camera {camcfg["id"]} feed stopped - failed to connect')
+                    break
                 ret, frame = cap.read()
                 if self.stop_feed:
                     break
                 if ret:
-                    if not stream_ok:
+                    if not frame_ok:
                         self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
                     cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
                 else:
                     if frame_ok:
-                        self.logger.warning(f'Camera {camcfg["id"]} feed stopped - no data received')
+                        self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
                     frame_ok = False
             except cv2.error:
                 self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
+                break
             if stream_ok:
                 if not frame_ok:
                 # start of missing video
