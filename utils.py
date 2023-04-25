@@ -91,7 +91,7 @@ class FeedManager:
         self.cam = {}
         self.stop_feed = True
         # self.thread.join()
-        self.logger.info(f'Camera {self.cam["id"]} feed stopped')
+        self.logger.info('Camera feed stopped')
         cv2.destroyAllWindows()
         self.thread = None
 
