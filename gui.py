@@ -8,12 +8,14 @@ from sys import stdout
 import configparser
 
 import utils
+import dbmgr
 
 class GUImgr:
-    def __init__(self, guiQueue:Queue=None):
+    def __init__(self, guiQueue:Queue=None, dbmgr=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv')):
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{__file__}\\..\\config.ini')
+        self.DBmgr = dbmgr
 
         self.subwindows = {}
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget()}
@@ -27,6 +29,7 @@ class GUImgr:
         self.cw = QtWidgets.QStackedWidget()
         self.cw.addWidget(self.centralwidgets['main'])
         self.cw.addWidget(self.centralwidgets['cameramanager'])
+        self.cw.addWidget(self.centralwidgets['dbmanager'])
         self.window.setCentralWidget(self.cw)
         layout = QtWidgets.QHBoxLayout(self.cw.currentWidget())
         self.window.setMinimumSize(1250, 600)
@@ -50,9 +53,10 @@ class GUImgr:
         layout.addWidget(helperwidget)
 
         # create three buttons
-        buttons = [QtWidgets.QPushButton(['Camera Manager', 'DB Manager', 'Manual Override'][i]) for i in range(3)]
-        buttons[0].clicked.connect(self.cameramgr)
-
+        funcs = [self.cameramgr, self.dbmgr, self.manualoverride]
+        btn_txt = ['Camera Manager', 'DB Manager', 'Manual Override']
+        buttons = [QtWidgets.QPushButton(i) for i in btn_txt]
+        [i.clicked.connect(funcs[j]) for j, i in enumerate(buttons)]
         # add the buttons to the layout
         for i in buttons:
             button_layout.addWidget(i)
@@ -145,8 +149,48 @@ class GUImgr:
         self.feedmgr = utils.FeedManager(self.logger)
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
-        # idk what to do here yet
+        # |------------------|-------------------------------|
+        # |                  |    [row]                      |
+        # |                  |    [row]                      |
+        # |                  |    [row]                      |
+        # |                  |    add_row_button             |
+        # |                  |                               |
+        # |   back_button    |  cancel                apply  |
+        # |------------------|-------------------------------|
 
+        # add a vertical layout for the buttons as the first item in the layout
+        layout = QtWidgets.QHBoxLayout()
+        self.dbbutton_layout = QtWidgets.QVBoxLayout()
+        centerwidget = self.centralwidgets['dbmanager']
+        centerwidget.setLayout(layout)
+
+        # create a line edit for each row in the database
+        self.dbrows = []
+        for i in self.DBmgr:
+            w = QtWidgets.QWidget()
+            w.setLayout(QtWidgets.QHBoxLayout())
+            for j in i:
+                self.dbrows.append(QtWidgets.QLineEdit(j))
+                w.layout().addWidget(self.dbrows[-1])
+            self.dbbutton_layout.addWidget(w)
+
+        # add the add row button
+        self.dbbuttons = [QtWidgets.QPushButton('Add Row')]
+        self.dbbutton_layout.addWidget(self.dbbuttons[-1])
+        #self.dbbuttons[-1].clicked.connect(self.adddbrow)
+        self.dbbutton_layout.addStretch()
+
+        # add the back button
+        self.dbbuttons = [QtWidgets.QPushButton('Back')]
+        self.dbbutton_layout.addWidget(self.dbbuttons[-1])
+        self.dbbuttons[-1].clicked.connect(self.resetContent)
+        helperwidget = QtWidgets.QWidget()
+        # helperwidget.setMinimumWidth(200)
+        # helperwidget.setMaximumWidth(200)
+        helperwidget.setLayout(self.dbbutton_layout)
+        centerwidget.layout().addWidget(helperwidget)
+
+        # exec and kill
         self.app.exec()
         self.kill()
 
@@ -176,6 +220,9 @@ class GUImgr:
 
     def dbmgr(self):
         self.cw.setCurrentWidget(self.centralwidgets['dbmanager'])
+
+    def manualoverride(self):
+        pass
 
     def resetContent(self):
         self.cw.setCurrentWidget(self.centralwidgets['main'])
@@ -304,7 +351,6 @@ class Camera(QtWidgets.QWidget):
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
         cfg = {'id':self.id}|{k:v for k, v in self.config.items(f'CAM_{self.id}')}
-        print(cfg)
         layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop()))
         layout.addStretch()
         layout.addWidget(QtWidgets.QPushButton("Reset", clicked=self.reset))

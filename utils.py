@@ -92,8 +92,8 @@ class FeedManager:
         self.stop_feed = True
         # self.thread.join()
         self.logger.info('Camera feed stopped')
-        cv2.destroyAllWindows()
-        self.thread = None
+        # cv2.destroyAllWindows()
+        # self.thread = None
 
     def livefeed_thread(self, camcfg:dict):
         # cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
@@ -109,12 +109,14 @@ class FeedManager:
                     break
                 ret, frame = cap.read()
                 if self.stop_feed:
+                    cv2.destroyAllWindows()
                     break
                 if ret:
                     if not frame_ok:
                         self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
                     cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
+                    cv2.waitKey(1)
                 else:
                     if frame_ok:
                         self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
@@ -138,6 +140,7 @@ class FeedManager:
                     stream_ok = True
         cap.release()
         cv2.destroyAllWindows()
+        self.thread = None
 
 
 def crop_image(img, detections, threshold=0.5):

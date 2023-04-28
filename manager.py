@@ -35,8 +35,8 @@ if __name__ == "__main__":
         subprocess.check_call([PYTHON, '-m', 'pip', 'install', '--upgrade', *(MISSING + [])])
 
 
-    with open(f"{__file__}\\..\\lp.csv", "r") as f:
-        VALIDLP = (i.strip() for i in f.readlines())
+    # with open(f"{__file__}\\..\\lp.csv", "r") as f:
+        # VALIDLP = (i.strip() for i in f.readlines())
 
     logger.info("Starting main process")
 
@@ -45,6 +45,7 @@ import utils
 import worker
 import camera
 import gui
+import dbmgr
 
 
 class taskDistributor:
@@ -54,9 +55,10 @@ class taskDistributor:
         self.loggerQueue = mp.Queue()
         self.outQ = outputQueue
         self.inQ = inputQueue
+        self.dbmgr = dbmgr.DatabaseHandler(f"{__file__}\\..\\lp.csv", logger=self.logger)
 
         self.guiQueue = mp.Queue()
-        self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue,))
+        self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr))
         self.gui.start()
 
         self.logger.addHandler(QueueHandler(self.guiQueue))
@@ -84,9 +86,7 @@ class taskDistributor:
                 worker.assignTask(self.inQ.get(block=True))
 
     def check(self, task:utils.Task):
-        cv2.imshow(f"LP: {task.data}", task.img[task.y:task.y+task.h, task.x:task.x+task.w])
-        cv2.waitKey(0)
-        if task.data not in VALIDLP:
+        if task.data not in self.dbmgr:
             return
         self.logger.info(f"Found valid LP: {task.data}")
 
