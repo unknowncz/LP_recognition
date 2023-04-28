@@ -143,7 +143,7 @@ class FeedManager:
         self.thread = None
 
 
-def crop_image(img, detections, threshold=0.5):
+def crop_image(img, detections, threshold=0.2):
     boxes = detections['detection_boxes'][0].numpy()
     scores = detections['detection_scores'][0].numpy()
     for i, score in enumerate(scores):

@@ -29,30 +29,38 @@ class Worker:
         while True:
             try:
                 task:utils.Task = self._Qrecv.get()
-                box, score, *_ = self.detector(task.data)
-                img = task.data
-                if score > 0.5:
-                    img = img[box[1]:box[3], box[0]:box[2]]
-                    pos = (box[0], box[1], box[2]-box[0], box[3]-box[1])
-                else:
-                    pos = (0,0,img.shape[1],img.shape[0])
-                text = get_text(img)
-                self._Qsend.put(utils.Task(id=task.id, data=text, pos=pos), block=False)
+                detections = self.detector(task.data)
+                img = utils.crop_image(task.data, detections)
+                text = ""
+                if img is not None:
+                    imgmean = np.mean(img)
+                    _, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
+                    cv2.imshow("img", img)
+                    cv2.waitKey(1)
+                    text = get_text(img)
+                    try:
+                        text = "".join(img)
+                    except:
+                        pass
+                self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
                 self.logger.error(f"Exception in worker", extra={'traceback':traceback.format_exc()})
+                traceback.print_exc()
                 if type(e) == KeyboardInterrupt:
                     break
 
 
 def get_text(img, ocr=OCR):
     img = np.asarray(img)
-    result = ocr.ocr(img, cls=True)
+    result = ocr.ocr(img, cls=False)
     result = result[0]
+    # print(result)
     # clean up the result
     # make sure the text only contains alphanumeric characters
     # result format: [bbox, (text, confidence)]
     for i in range(len(result)):
-        result[i] = [result[i][0], (''.join([c for c in result[i][1][0] if c.isalnum()]), result[i][1][1])]
+        # result[i] = [result[i][0], (''.join([c for c in result[i][1][0] if c.isalnum()]), result[i][1][1])]
+        result[i] = [result[i][0], (''.join([c for c in result[i][0] if c.isalnum()]), result[i][1])]
     # result[1] = (''.join([c for c in result[1][0] if c.isalnum()]), result[1][1])
 
     return result
@@ -62,7 +70,7 @@ if __name__ == '__main__':
     print("-------------------")
     detector = utils.Detector(f'{__file__}\\..\\saved_model\\saved_model')
 
-    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\00f220d92e7681e7_jpg.rf.91242ad651c16705909c3ccde3eb6713.jpg")
+    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\1af54be605a0f1d5_jpg.rf.34325727380de220fcd244b900430c97.jpg")
     # img = cv2.imread(f"{__file__}\\..\\test17.jpg")
 
     # cv2.imshow('img', img)

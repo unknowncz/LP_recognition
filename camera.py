@@ -58,8 +58,8 @@ class Camera:
             try:
                 ret, frame = self._vcap.read()
                 if not ret:
-                    self.logger.critical('Failed to grab frame')
-                    break
+                    self.logger.debug('Failed to grab frame')
+                    # break
                 try:
                     self._output.put_nowait(utils.Task(self._id, frame))
                 except mp.queues.Full:
