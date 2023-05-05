@@ -85,6 +85,7 @@ class taskDistributor:
                 worker.assignTask(self.inQ.get(block=True))
 
     def check(self, task:utils.Task):
+        if len(task.data) != 2: return
         bbox, (lp, conf) = task.data
         if lp in self.dbmgr:
             self.logger.info(f"Found valid LP: {task.data}")

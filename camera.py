@@ -13,7 +13,7 @@ class Camera:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(QueueHandler(loggerQueue))
-        
+
         self._id = id
         self._adress = adress
         self._output = output
@@ -25,7 +25,7 @@ class Camera:
 
     def connect(self, autostart=False):
         self.logger.info(f"Connecting to camera {self._id} at {self._adress[0]}:{self._adress[1]}")
-        
+
         self._vcap = cv2.VideoCapture(f"rtsp://{self.login}:{self.password}@{self._adress[0]}:{int(self._adress[1])}")
         try:
             ret ,_= self._vcap.read()
@@ -33,7 +33,7 @@ class Camera:
                 self.logger.error(f"Failed to connect to camera {self._id}", extra={'traceback':traceback.format_exc()})
                 return
         except:traceback.print_exc();return
-        
+
 
         if autostart:
             self.run()
