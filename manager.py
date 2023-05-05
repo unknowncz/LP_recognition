@@ -47,9 +47,6 @@ import gui
 import dbmgr
 
 
-import cv2
-
-
 class taskDistributor:
     def __init__(self, logger=logging.getLogger(__name__), outputQueue=mp.Queue(), inputQueue=mp.Queue(200)):
         self.config = config
@@ -89,9 +86,6 @@ class taskDistributor:
 
     def check(self, task:utils.Task):
         self.logger.info(f"Found valid LP: {task.data}")
-        #if task.data not in self.dbmgr:
-            #return
-            # pass
 
     def __del__(self):
         self.gui.kill()

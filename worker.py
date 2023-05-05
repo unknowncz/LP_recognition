@@ -45,7 +45,6 @@ class Worker:
                 self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
                 self.logger.error(f"Exception in worker", extra={'traceback':traceback.format_exc()})
-                traceback.print_exc()
                 if type(e) == KeyboardInterrupt:
                     break
 
@@ -54,13 +53,11 @@ def get_text(img, ocr=OCR):
     img = np.asarray(img)
     result = ocr.ocr(img, cls=False)
     result = result[0]
-    # print(result)
     # clean up the result
     # make sure the text only contains alphanumeric characters
     # result format: [bbox, (text, confidence)]
     for i in range(len(result)):
-        # result[i] = [result[i][0], (''.join([c for c in result[i][1][0] if c.isalnum()]), result[i][1][1])]
-        result[i] = [result[i][0], (''.join([c for c in result[i][0] if c.isalnum()]), result[i][1])]
+        result[i] = [result[i][0], (''.join([c for c in result[i][1][0] if c.isalnum()]), result[i][1][1])]
     # result[1] = (''.join([c for c in result[1][0] if c.isalnum()]), result[1][1])
 
     return result

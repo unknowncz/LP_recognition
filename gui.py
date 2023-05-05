@@ -149,14 +149,15 @@ class GUImgr:
         self.feedmgr = utils.FeedManager(self.logger)
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
-        # |------------------|-------------------------------|
-        # |                  |    [row]                      |
-        # |                  |    [row]                      |
-        # |                  |    [row]                      |
-        # |                  |    add_row_button             |
-        # |                  |                               |
-        # |   back_button    |  cancel                apply  |
-        # |------------------|-------------------------------|
+        # |--------------------------------------------------|
+        # |                      [row]                       |
+        # |                      [row]                       |
+        # |                      [row]                       |
+        # |                 add_row_button                   |
+        # |                                                  |
+        # |         cancel                      apply        |
+        # |                      back                        |
+        # |--------------------------------------------------|
 
         # add a vertical layout for the buttons as the first item in the layout
         layout = QtWidgets.QHBoxLayout()
@@ -165,20 +166,36 @@ class GUImgr:
         centerwidget.setLayout(layout)
 
         # create a line edit for each row in the database
-        self.dbrows = []
+        # add the line edits to a scroll area
+        scroll = QtWidgets.QScrollArea()
+        scroll.sizePolicy().setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Maximum)
+        hw = QtWidgets.QWidget()
+        hwl = QtWidgets.QVBoxLayout()
+        hwl.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
+        hw.setLayout(hwl)
+        hw.setStyleSheet("background-color: rgb(255, 0, 0);")
+
+        self.dbbutton_layout.addWidget(scroll)
         for i in self.DBmgr:
             w = QtWidgets.QWidget()
-            w.setLayout(QtWidgets.QHBoxLayout())
+            wl = QtWidgets.QHBoxLayout()
+            wl.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
+            w.setLayout(wl)
             for j in i:
-                self.dbrows.append(QtWidgets.QLineEdit(j))
-                w.layout().addWidget(self.dbrows[-1])
-            self.dbbutton_layout.addWidget(w)
+                le = QtWidgets.QLineEdit(j)
+                # stretch the line edit to fill all available space
+                le.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+                wl.addWidget(le)
+            hw.layout().addWidget(w)
+
+        scroll.setWidget(hw)
+
 
         # add the add row button
         self.dbbuttons = [QtWidgets.QPushButton('Add Row')]
         self.dbbutton_layout.addWidget(self.dbbuttons[-1])
         #self.dbbuttons[-1].clicked.connect(self.adddbrow)
-        self.dbbutton_layout.addStretch()
+        # self.dbbutton_layout.addStretch()
 
         # add the back button
         self.dbbuttons = [QtWidgets.QPushButton('Back')]

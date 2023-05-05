@@ -3,7 +3,7 @@ import cv2
 import logging
 from logging.handlers import QueueHandler
 import traceback
-from time import sleep
+import time
 
 import utils
 
@@ -32,7 +32,6 @@ class Camera:
             if not ret:
                 self.logger.error(f"Failed to connect to camera {self._id}", extra={'traceback':traceback.format_exc()})
                 return
-            sleep(0.05)
         except:traceback.print_exc();return
         
 
@@ -40,7 +39,6 @@ class Camera:
             self.run()
 
     def run(self):
-
         # files = [f for f in os.listdir(f"{__file__}\\..\\LP_Detection\\train")]
         # i = 0
         while True:
@@ -58,8 +56,8 @@ class Camera:
             try:
                 ret, frame = self._vcap.read()
                 if not ret:
-                    self.logger.debug('Failed to grab frame')
-                    # break
+                    self.logger.critical('Failed to grab frame')
+                    break
                 try:
                     self._output.put_nowait(utils.Task(self._id, frame))
                 except mp.queues.Full:
