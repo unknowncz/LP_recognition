@@ -3,7 +3,7 @@ import cv2
 import logging
 from logging.handlers import QueueHandler
 import traceback
-import time
+
 
 import utils
 

@@ -85,7 +85,10 @@ class taskDistributor:
                 worker.assignTask(self.inQ.get(block=True))
 
     def check(self, task:utils.Task):
-        self.logger.info(f"Found valid LP: {task.data}")
+        bbox, (lp, conf) = task.data
+        if lp in self.dbmgr:
+            self.logger.info(f"Found valid LP: {task.data}")
+            return True
 
     def __del__(self):
         self.gui.kill()

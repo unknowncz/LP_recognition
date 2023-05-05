@@ -10,25 +10,25 @@ class DatabaseHandler:
             self.database = {}
             for row in reader:
                 try:
-                    self.database |= {row[0]:row[1]}
+                    self.database |= {row[0].strip().upper():row[1].strip()}
                 except IndexError:
                     if len(row) == 0:
                         continue
-                    logger.warning(f"Database entry {repr(row[0])} is invalid")
-                    self.database |= {row[0]:''}
+                    logger.warning(f"Database entry {repr(row[0])} has an empty value")
+                    self.database |= {row[0].strip().upper():''}
         self.logger.info(f"Database loaded from {path}")
 
-    def __contains__(self, item):
+    def __contains__(self, item:str):
         return self.database.get(item, None) is not None
 
-    def __getitem__(self, item):
+    def __getitem__(self, item:str):
         return self.database.get(item, None)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key:str, value):
         self.database[key] = value
 
     def __iter__(self):
         return iter(self.database.items())
-    
+
     def __len__(self):
         return len(self.database.items())

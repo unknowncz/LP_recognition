@@ -150,9 +150,9 @@ class GUImgr:
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
         # |--------------------------------------------------|
-        # |                      [row]                       |
-        # |                      [row]                       |
-        # |                      [row]                       |
+        # | [row 1 item 1          ][row 1 item 2          ] |
+        # | [row 2 item 1          ][row 2 item 2          ] |
+        # | [row 3 item 1          ][row 3 item 2          ] |
         # |                 add_row_button                   |
         # |                                                  |
         # |         cancel                      apply        |
@@ -160,52 +160,53 @@ class GUImgr:
         # |--------------------------------------------------|
 
         # add a vertical layout for the buttons as the first item in the layout
-        layout = QtWidgets.QHBoxLayout()
-        self.dbbutton_layout = QtWidgets.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
+        scroll = QtWidgets.QScrollArea()
+        self.dblayout = QtWidgets.QGridLayout()
         centerwidget = self.centralwidgets['dbmanager']
         centerwidget.setLayout(layout)
 
-        # create a line edit for each row in the database
-        # add the line edits to a scroll area
-        scroll = QtWidgets.QScrollArea()
-        scroll.sizePolicy().setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Maximum)
-        hw = QtWidgets.QWidget()
-        hwl = QtWidgets.QVBoxLayout()
-        hwl.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
-        hw.setLayout(hwl)
-        hw.setStyleSheet("background-color: rgb(255, 0, 0);")
+        self.dblayout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
+        # apply the above code only for the width
 
-        self.dbbutton_layout.addWidget(scroll)
-        for i in self.DBmgr:
-            w = QtWidgets.QWidget()
-            wl = QtWidgets.QHBoxLayout()
-            wl.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
-            w.setLayout(wl)
-            for j in i:
-                le = QtWidgets.QLineEdit(j)
-                # stretch the line edit to fill all available space
-                le.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
-                wl.addWidget(le)
-            hw.layout().addWidget(w)
+        helperlayout = QtWidgets.QVBoxLayout()
+        helperwidget = QtWidgets.QWidget()
+        helperwidget.setLayout(self.dblayout)
+        helperwidget.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
+        helperlayout.addWidget(helperwidget)
+        helperlayout.setContentsMargins(0, 0, 0, 0)
 
-        scroll.setWidget(hw)
+        # add each entry in the config file to the layout
+        for i, row in enumerate(self.DBmgr):
+            for j, col in enumerate(row):
+                le = QtWidgets.QLineEdit()
+                le.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Expanding)
+                le.setMaximumHeight(20)
+                le.setText(col)
+                self.dblayout.addWidget(le, i, j)
 
+        # add a vertical spacer to the end of the layout
+        helperlayout.addStretch(200)
+
+        addrowbtn = QtWidgets.QPushButton('Add Row')
+        # addrowbtn.clicked.connect(self.adddbrow)
+        helperlayout.addWidget(addrowbtn)
+
+        scroll.setLayout(helperlayout)
+
+        layout.addWidget(scroll)
 
         # add the add row button
-        self.dbbuttons = [QtWidgets.QPushButton('Add Row')]
-        self.dbbutton_layout.addWidget(self.dbbuttons[-1])
-        #self.dbbuttons[-1].clicked.connect(self.adddbrow)
+        # self.dbbuttons[-1].clicked.connect(self.adddbrow)
         # self.dbbutton_layout.addStretch()
 
         # add the back button
-        self.dbbuttons = [QtWidgets.QPushButton('Back')]
-        self.dbbutton_layout.addWidget(self.dbbuttons[-1])
-        self.dbbuttons[-1].clicked.connect(self.resetContent)
-        helperwidget = QtWidgets.QWidget()
+        back_btn = QtWidgets.QPushButton('Back')
+        layout.addWidget(back_btn)
+        back_btn.clicked.connect(self.resetContent)
         # helperwidget.setMinimumWidth(200)
         # helperwidget.setMaximumWidth(200)
-        helperwidget.setLayout(self.dbbutton_layout)
-        centerwidget.layout().addWidget(helperwidget)
+
 
         # exec and kill
         self.app.exec()
