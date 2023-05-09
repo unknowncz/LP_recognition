@@ -11,11 +11,11 @@ import utils
 import dbmgr
 
 class GUImgr:
-    def __init__(self, guiQueue:Queue=None, dbmgr=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv')):
+    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv')):
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{__file__}\\..\\config.ini')
-        self.DBmgr = dbmgr
+        self.DBmgr = db
 
         self.subwindows = {}
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget()}
@@ -163,10 +163,11 @@ class GUImgr:
         layout = QtWidgets.QVBoxLayout()
         scroll = QtWidgets.QScrollArea()
         self.dblayout = QtWidgets.QGridLayout()
+        self.dblayout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
+        self.dblayout.setContentsMargins(0, 0, 0, 0)
         centerwidget = self.centralwidgets['dbmanager']
         centerwidget.setLayout(layout)
 
-        self.dblayout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
         # apply the above code only for the width
 
         helperlayout = QtWidgets.QVBoxLayout()
@@ -174,23 +175,33 @@ class GUImgr:
         helperwidget.setLayout(self.dblayout)
         helperwidget.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         helperlayout.addWidget(helperwidget)
-        helperlayout.setContentsMargins(0, 0, 0, 0)
 
         # add each entry in the config file to the layout
         for i, row in enumerate(self.DBmgr):
-            for j, col in enumerate(row):
-                le = QtWidgets.QLineEdit()
-                le.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Expanding)
-                le.setMaximumHeight(20)
-                le.setText(col)
-                self.dblayout.addWidget(le, i, j)
+            self.adddbrow(row[0], row[1])
 
         # add a vertical spacer to the end of the layout
+        addrowbtn = QtWidgets.QPushButton('Add Row')
+
+        addrowbtn.clicked.connect(lambda: self.adddbrow('', ''))
+        helperlayout.addWidget(addrowbtn)
         helperlayout.addStretch(200)
 
-        addrowbtn = QtWidgets.QPushButton('Add Row')
-        # addrowbtn.clicked.connect(self.adddbrow)
-        helperlayout.addWidget(addrowbtn)
+        # add the cancel and apply buttons
+        cancelbtn = QtWidgets.QPushButton('Cancel')
+        applybtn = QtWidgets.QPushButton('Apply')
+        cancelbtn.setMinimumWidth(100)
+        applybtn.setMinimumWidth(100)
+
+        l = QtWidgets.QHBoxLayout()
+        cancelbtn.clicked.connect(self.resetdbchanges)
+        applybtn.clicked.connect(self.applydbchanges)
+        l.addStretch(2)
+        l.addWidget(cancelbtn)
+        l.addStretch(3)
+        l.addWidget(applybtn)
+        l.addStretch(2)
+        helperlayout.addLayout(l)
 
         scroll.setLayout(helperlayout)
 
@@ -203,7 +214,7 @@ class GUImgr:
         # add the back button
         back_btn = QtWidgets.QPushButton('Back')
         layout.addWidget(back_btn)
-        back_btn.clicked.connect(self.resetContent)
+        back_btn.clicked.connect(lambda:(self.resetdbchanges(),self.resetContent()))
         # helperwidget.setMinimumWidth(200)
         # helperwidget.setMaximumWidth(200)
 
@@ -239,8 +250,44 @@ class GUImgr:
     def dbmgr(self):
         self.cw.setCurrentWidget(self.centralwidgets['dbmanager'])
 
+    def applydbchanges(self):
+        # get the text from each line edit and save it to the config file
+        self.DBmgr.database = {}
+        for i in range(self.dblayout.rowCount()):
+            if self.dblayout.itemAtPosition(i, 0) is None:
+                continue
+            key = self.dblayout.itemAtPosition(i, 0).widget().text()
+            value = self.dblayout.itemAtPosition(i, 1).widget().text()
+            if key:
+                self.DBmgr.database[key] = value
+        self.DBmgr.save()
+
+    def resetdbchanges(self):
+        for i in reversed(range(self.dblayout.count())):
+            # remove all the widgets from the layout
+            self.dblayout.itemAt(i).widget().deleteLater()
+            self.dblayout.itemAt(i).widget().setParent(None)
+            # set the row height to 0 to remove the empty row(s)
+            self.dblayout.setRowMinimumHeight(i, 0)
+        for idx, row in enumerate(self.DBmgr):
+            self.adddbrow(row[0], row[1], forceidx=idx)
+
+    def adddbrow(self, *args, forceidx=None):
+        # add n new line edits to the layout
+        row = self.dblayout.rowCount() if forceidx is None else forceidx
+        for i, text in enumerate(args):
+            le = QtWidgets.QLineEdit()
+            le.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Expanding)
+            le.setText(str(text))
+            le.setMaximumHeight(20)
+            le.setMinimumHeight(20)
+            # add a new row
+            self.dblayout.addWidget(le, row, i)
+            # set the text to the default value
+        self.dblayout.setRowMinimumHeight(row, 20)
+
     def manualoverride(self):
-        pass
+        ...
 
     def resetContent(self):
         self.cw.setCurrentWidget(self.centralwidgets['main'])

@@ -5,6 +5,7 @@ import logging
 class DatabaseHandler:
     def __init__(self, path, logger=logging.getLogger(__name__)):
         self.logger = logger
+        self.path = path
         with open(path, "r") as f:
             reader = csv.reader(f)
             self.database = {}
@@ -17,6 +18,12 @@ class DatabaseHandler:
                     logger.warning(f"Database entry {repr(row[0])} has an empty value")
                     self.database |= {row[0].strip().upper():''}
         self.logger.info(f"Database loaded from {path}")
+
+    def save(self):
+        with open(self.path, "w") as f:
+            writer = csv.writer(f)
+            for k, v in self.database.items():
+                writer.writerow([k, v])
 
     def __contains__(self, item:str):
         return self.database.get(item, None) is not None
