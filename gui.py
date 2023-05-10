@@ -195,7 +195,7 @@ class GUImgr:
 
         l = QtWidgets.QHBoxLayout()
         cancelbtn.clicked.connect(self.resetdbchanges)
-        applybtn.clicked.connect(self.applydbchanges)
+        applybtn.clicked.connect(lambda:(self.applydbchanges(), self.resetdbchanges()))
         l.addStretch(2)
         l.addWidget(cancelbtn)
         l.addStretch(3)
@@ -267,7 +267,8 @@ class GUImgr:
             # remove all the widgets from the layout
             self.dblayout.itemAt(i).widget().deleteLater()
             self.dblayout.itemAt(i).widget().setParent(None)
-            # set the row height to 0 to remove the empty row(s)
+        # set the row height to 0 to remove the empty row(s)
+        for i in reversed(range(self.dblayout.rowCount())):
             self.dblayout.setRowMinimumHeight(i, 0)
         for idx, row in enumerate(self.DBmgr):
             self.adddbrow(row[0], row[1], forceidx=idx)
