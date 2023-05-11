@@ -6,16 +6,27 @@ from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 from sys import stdout
 import configparser
+import time
 
 import utils
 import dbmgr
 
 class GUImgr:
-    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv')):
+    """GUI manager class for the main window
+    """
+    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv'), mgr=None):
+        """Initialize the class and the GUI
+
+        Args:
+            guiQueue (Queue, optional): Logging queue for multiprocess communication. Defaults to None.
+            db (dbmgr.DatabaseHandler, optional): Database handler for easier access to data and for easier overrides. Defaults to dbmgr.DatabaseHandler(f'{__file__}\..\lp.csv').
+            mgr (manager.taskDistributor, optional): Parent class for access to its variables. Defaults to None.
+        """
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{__file__}\\..\\config.ini')
         self.DBmgr = db
+        self.mgr = mgr
 
         self.subwindows = {}
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget()}
@@ -224,6 +235,8 @@ class GUImgr:
         self.kill()
 
     def settingswindow(self):
+        """Create a new window for the settings. If the window is already open, bring it to the front. To be phased out.
+        """
         # make a new window if the settings button is clicked and the window is not already open
         if type(window:=self.subwindows.get('settings', None)) == utils.SubWindow:
             # window already open, bring it to the front
@@ -240,17 +253,28 @@ class GUImgr:
         self.subwindows |= {'settings':window}
         window.show()
 
-    def camdetails(self, camid):
+    def camdetails(self, camid:int):
+        """Show the settings for the camera with the given id
+
+        Args:
+            camid (int): The id of the camera to show the settings for
+        """
         self.camerawidget.setCurrentIndex(camid+1)
         # self.camsettings.setText(f"Camera {camid+1}")
 
     def cameramgr(self):
+        """Show the camera manager widget
+        """
         self.cw.setCurrentWidget(self.centralwidgets['cameramanager'])
 
     def dbmgr(self):
+        """Show the database manager widget
+        """
         self.cw.setCurrentWidget(self.centralwidgets['dbmanager'])
 
     def applydbchanges(self):
+        """Apply the changes made to the database manager and save them to the .csv file
+        """
         # get the text from each line edit and save it to the config file
         self.DBmgr.database = {}
         for i in range(self.dblayout.rowCount()):
@@ -263,6 +287,8 @@ class GUImgr:
         self.DBmgr.save()
 
     def resetdbchanges(self):
+        """Reset the database manager to the values in the .csv file
+        """
         for i in reversed(range(self.dblayout.count())):
             # remove all the widgets from the layout
             self.dblayout.itemAt(i).widget().deleteLater()
@@ -273,7 +299,12 @@ class GUImgr:
         for idx, row in enumerate(self.DBmgr):
             self.adddbrow(row[0], row[1], forceidx=idx)
 
-    def adddbrow(self, *args, forceidx=None):
+    def adddbrow(self, *args, forceidx:int=None):
+        """Add a new row to the database manager
+
+        Args:
+            forceidx (int, optional): Force index of row to be modified rather than add a new row. Defaults to None.
+        """
         # add n new line edits to the layout
         row = self.dblayout.rowCount() if forceidx is None else forceidx
         for i, text in enumerate(args):
@@ -288,19 +319,32 @@ class GUImgr:
         self.dblayout.setRowMinimumHeight(row, 20)
 
     def manualoverride(self):
-        ...
+        """Manually override the parent check for the next 10 seconds
+        """
+        self.mgr.nextautopass = (time.time() + 10, True)
 
     def resetContent(self):
+        """Reset the content of the main window to the main widget
+        """
         self.cw.setCurrentWidget(self.centralwidgets['main'])
         self.camerawidget.setCurrentIndex(0)
 
-    def _addWidgetPair(self, label, widget, layout):
+    def _addWidgetPair(self, label:str, widget, layout):
+        """Add a label and widget pair to a layout (QLabel, widget)
+
+        Args:
+            label (str): Label to be displayed next to the widget
+            widget (QWidget): Widget to be added
+            layout (QLayout): Layout to hold the label and widget
+        """
         l = QtWidgets.QHBoxLayout()
         l.addWidget(QtWidgets.QLabel(label))
         l.addWidget(widget)
         layout.addLayout(l)
 
     def addcamera(self):
+        """Add a new camera to the camera manager
+        """
         # add a new camera to the config file
         # this will also add a new section to the config file
         # the new section will be named CAM_{num_cameras}
@@ -325,6 +369,11 @@ class GUImgr:
         self.cameras[-1].apply()
 
     def deletecamera(self, id):
+        """Delete a camera from the camera manager given its id
+
+        Args:
+            id (int): ID of the camera to be deleted
+        """
         # delete the camera with the given id
 
         # remove the camera from the config file
@@ -359,7 +408,17 @@ class GUImgr:
         self.app.exit()
 
 class Camera(QtWidgets.QWidget):
-    def __init__(self, config:configparser.ConfigParser, id, manager:GUImgr, button:QtWidgets.QPushButton):
+    """Helper class to manage the camera settings and controls
+    """
+    def __init__(self, config:configparser.ConfigParser, id:int, manager:GUImgr, button:QtWidgets.QPushButton):
+        """Create a new camera object
+
+        Args:
+            config (configparser.ConfigParser): Config to be used
+            id (int): ID of the camera
+            manager (GUImgr): parent GUI manager
+            button (QtWidgets.QPushButton): Button to be used to switch to this camera
+        """
         super().__init__()
         self.config = config
         self.id = id
@@ -406,7 +465,14 @@ class Camera(QtWidgets.QWidget):
         self.layout.addLayout(self.get_lower_btns())
         self.setLayout(self.layout)
 
-    def _addWidgetPair(self, label, widget, layout):
+    def _addWidgetPair(self, label:str, widget:QtWidgets.QWidget, layout:QtWidgets.QLayout):
+        """Add a label and a widget to a layout
+
+        Args:
+            label (str): Label to be used
+            widget (QWidget): Widget to be added to the layout
+            layout (QLayout): Layout to hold the label and the widget
+        """
         # add a label and a widget to the layout
         l = QtWidgets.QLabel(label)
         l.setFixedWidth(100)
@@ -414,6 +480,11 @@ class Camera(QtWidgets.QWidget):
         layout.addWidget(widget)
 
     def get_lower_btns(self):
+        """Create the lower buttons for the camera details page.
+
+        Returns:
+            QLayout: Layout containing the lower buttons
+        """
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
         cfg = {'id':self.id}|{k:v for k, v in self.config.items(f'CAM_{self.id}')}
@@ -424,18 +495,27 @@ class Camera(QtWidgets.QWidget):
         return layout
 
     def reset(self):
+        """Reset the details of the camera to the values contained in the config file
+        """
         # reset the inputs to the config file
         for k, v in self.inputs.items():
             v.setText(self.config[f'CAM_{self.id}'][k])
 
     def apply(self):
+        """Write the details of the camera to the config file.
+        """
         # apply the inputs to the config file
         for i in self.inputs:
             self.config[f'CAM_{self.id}'][i] = self.inputs[i].text()
         self.config.write(open(f'{__file__}\\..\\config.ini', 'w'), True)
         self.reset()
 
-    def updateId(self, id):
+    def updateId(self, id:int):
+        """Update the id of the camera.
+
+        Args:
+            id (int): New id of the camera
+        """
         # change the id of the camera in all the necessary places
         self.id = id
         self.title.setText(f"Camera {id}")

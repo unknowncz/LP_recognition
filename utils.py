@@ -17,7 +17,8 @@ import time
 
 @dataclass
 class Task:
-    '''A dataclass to hold the data for a task to be processed by a worker'''
+    """Task utilized when transporting data between processes
+    """
     id: int
     data: Any
     img: Any=None
@@ -25,8 +26,17 @@ class Task:
 
 # create a stream for the logger to output to the text box
 class LoggerOutput(logging.handlers.QueueHandler):
-    '''A handler class which writes logging records, appropriately formatted, to a QTextEdit'''
+    """A handler class which writes logging records, appropriately formatted, to a QTextEdit
+    """
     def __init__(self, queue:Queue=None, *args, reciever_meta:QtCore.QMetaObject, reciever:QTextEdit, formatter:logging.Formatter, **kwargs):
+        """Initialize the class.
+
+        Args:
+            reciever_meta (QtCore.QMetaObject): QTextEdit meta element, which the logger will output to.
+            reciever (QTextEdit): QTextEdit element, which the logger will output to.
+            formatter (logging.Formatter): Logging formatter to be used for the logs
+            queue (Queue, optional): Queue which the logger will recieve logs from. Defaults to None.
+        """
         super().__init__(queue, *args, **kwargs)
         self._queue = queue
         self.reciever_meta = reciever_meta
@@ -34,10 +44,22 @@ class LoggerOutput(logging.handlers.QueueHandler):
         self.formatter = formatter
 
     def emit(self, record:logging.LogRecord):
+        """Logger emit function override.
+
+        Args:
+            record (logging.LogRecord): LogRecord to be processed
+        """
         self.reciever_meta.invokeMethod(self.reciever, 'append', QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.formatter.format(record)))
 
 class Detector:
+    """Wrapper detector class for the Tensorflow model
+    """
     def __init__(self, path:str, *args, **kwargs):
+        """Initialize the class and load the model
+
+        Args:
+            path (str): Path to the model for license plate detection
+        """
         try:
             self.model = tf.saved_model.load(path, *args, **kwargs)
             self.wrappedmodel = tf.keras.Sequential()
@@ -51,6 +73,14 @@ class Detector:
         self.wrappedmodel.stop_training = True
 
     def __call__(self, img):
+        """Detect license plates in the image
+
+        Args:
+            img (np.ndarray): Image to be processed
+
+        Returns:
+            tensor: Tensor containing the bounding boxes of the detected license plates
+        """
         image_np = np.array(img)
         input_tensor = tf.convert_to_tensor(image_np)
         input_tensor = input_tensor[tf.newaxis, ...]
@@ -58,29 +88,58 @@ class Detector:
         return detections
 
 class SubWindow(QWidget):
+    """SubWindow class for the main window. To be phased out in the future.
+    """
     def __init__(self, *args, title='SubWindow', **kwargs):
+        """Initialize the class.
+
+        Args:
+            title (str, optional): Window title. Defaults to 'SubWindow'.
+        """
         super().__init__(*args, **kwargs)
         self.setWindowTitle(title)
 
     # hide the window when the minimize button is clicked
-    def changeEvent(self, event):
+    def changeEvent(self, event:QtCore.QEvent):
+        """Change event override. Hides the window when the minimize button is clicked.
+
+        Args:
+            event (QtCore.QEvent): PyQT event
+        """
         if event.type() == QtCore.QEvent.Type.WindowStateChange:
             if self.windowState() & QtCore.Qt.WindowState.WindowMinimized:
                 self.hide()
                 event.ignore()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event:QtCore.QEvent):
+        """Close event override. Hides the window when the close button is clicked.
+
+        Args:
+            event (QtCore.QEvent): PyQT event
+        """
         self.hide()
         event.ignore()
 
 class FeedManager:
+    """Feed manager class for managing the live feeds
+    """
     def __init__(self, logger=logging.getLogger(), *args, **kwargs):
+        """Initialize the class.
+
+        Args:
+            logger (logging.Logger, optional): Logger. Defaults to logging.getLogger().
+        """
         self.cams = {}
         self.thread = None
         self.logger = logger
         self.stop_feed = False
 
     def start(self, camcfg:dict):
+        """Starts the live feed for the camera
+
+        Args:
+            camcfg (dict): Camera configuration dictionary
+        """
         self.cam = camcfg
         self.stop_feed = False
         self.thread = threading.Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
@@ -88,6 +147,8 @@ class FeedManager:
         self.thread.start()
 
     def stop(self):
+        """Stops the live feed for the camera
+        """
         self.cam = {}
         self.stop_feed = True
         # self.thread.join()
@@ -96,6 +157,11 @@ class FeedManager:
         # self.thread = None
 
     def livefeed_thread(self, camcfg:dict):
+        """Live feed thread function. Opens the live feed for the camera and displays it in a window.
+
+        Args:
+            camcfg (dict): Camera configuration dictionary
+        """
         # cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         # capture the video from the camera with a timeout of 5 seconds
         # if the camera connects, the timeout is cancelled
@@ -144,6 +210,16 @@ class FeedManager:
 
 
 def crop_image(img, detections, threshold=0.5):
+    """Crops the image to the bounding box of the detected license plate
+
+    Args:
+        img (np.ndarray): Image to be processed
+        detections (Tensor): Tensor containing the bounding boxes of the detected license plates
+        threshold (float, optional): Required threshold for the detection to pass. Defaults to 0.5.
+
+    Returns:
+        np.ndarray: Cropped image
+    """
     boxes = detections['detection_boxes'][0].numpy()
     scores = detections['detection_scores'][0].numpy()
     for i, score in enumerate(scores):

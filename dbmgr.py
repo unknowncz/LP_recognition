@@ -1,9 +1,16 @@
 import csv
 import logging
 
-
 class DatabaseHandler:
-    def __init__(self, path, logger=logging.getLogger(__name__)):
+    """Helper class to work with data.
+    """
+    def __init__(self, path:str, logger=logging.getLogger(__name__)):
+        """Initialize the class and load the data
+
+        Args:
+            path (str): Path to the .csv data source
+            logger (logging.Logger, optional): logger. Defaults to logging.getLogger(__name__).
+        """
         self.logger = logger
         self.path = path
         with open(path, "r") as f:
@@ -20,10 +27,12 @@ class DatabaseHandler:
         self.logger.info(f"Database loaded from {path}")
 
     def save(self):
+        """Write the data to the .csv file.
+        """
         with open(self.path, "w") as f:
             writer = csv.writer(f)
             for k, v in self.database.items():
-                writer.writerow([k, v])
+                writer.writerow([str(k), str(v)])
 
     def __contains__(self, item:str):
         return self.database.get(item, None) is not None

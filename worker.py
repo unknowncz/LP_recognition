@@ -12,7 +12,18 @@ OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
 import utils
 
 class Worker:
+    """A worker class to process tasks from a queue and put the results in another queue
+    """
     def __init__(self, qrecv:mp.Queue, qsend:mp.Queue, loggerQueue=mp.Queue(), detector=utils.Detector(f'{__file__}\\..\\saved_model\\saved_model'), *_, autostart=False, **__) -> None:
+        """Initialize the worker
+
+        Args:
+            qrecv (mp.Queue): Receiver queue for communication.
+            qsend (mp.Queue): Transmitter queue for communication.
+            loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
+            detector (utils.Detector, optional): Licence Plate detector class. Defaults to utils.Detector(f'{__file__}\..\saved_model\saved_model').
+            autostart (bool, optional): Automatically start the main loop, if set to false, the 'run' method needs to be called separately. Defaults to False.
+        """
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
         handler = log_handlers.QueueHandler(loggerQueue)
@@ -25,6 +36,8 @@ class Worker:
         if autostart: self.run()
 
     def run(self):
+        """Main loop of the worker.
+        """
         self.logger.info("Worker started")
         while True:
             try:
@@ -48,8 +61,16 @@ class Worker:
                 if type(e) == KeyboardInterrupt:
                     break
 
-
 def get_text(img, ocr=OCR):
+    """Get text from an image.
+
+    Args:
+        img (numpy.ndarray): Image for text extraction
+        ocr (paddleocr.PaddleOCR, optional): OCR model for detection. Defaults to OCR.
+
+    Returns:
+        list: Extracted text with bbox and confidence
+    """
     img = np.asarray(img)
     result = ocr.ocr(img, cls=False)
     result = result[0]
