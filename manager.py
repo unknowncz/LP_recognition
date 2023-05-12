@@ -54,7 +54,7 @@ class taskDistributor:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
             outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
             inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(200).
-        """        ''''''
+        """
         self.config = config
         self.logger = logger
         self.loggerQueue = mp.Queue()
@@ -116,7 +116,7 @@ class taskDistributor:
             self.logger.info(f"Found valid LP: {lp}; {self.dbmgr[lp]}")
             return True
 
-    def __delete__(self):
+    def __del__(self):
         self.gui.kill()
         for worker in self.workers:
             try:
@@ -201,7 +201,7 @@ class workerHandler:
         """
         self._process.kill()
 
-    def __delete__(self):
+    def __del__(self):
         self.kill()
 
 
