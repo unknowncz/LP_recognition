@@ -13,28 +13,14 @@ import time
 #  - Logging - finalise logging system (last thing to do)
 #  - Config file saving - save config file on exit
 
+logger = mp.get_logger()
+logger.addHandler(logging.StreamHandler(stdout))
 if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO, filename=f"{__file__}\\..\\log", filemode='w')
-    logger.addHandler(logging.StreamHandler(stdout))
-    logger.info("Loading config")
+    # logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s")
 
-    config = configparser.ConfigParser()
-    config.read(f"{__file__}\\..\\config.ini")
+    logger.addHandler(logging.FileHandler(f"{__file__}\\..\\log", mode='w'))
+    logger.setLevel(logging.INFO)
 
-
-    REQUIRED = config['GENERAL']['MODULES'].split(', ') + []
-    '''Check if required modules are installed, if not, attempt to install them'''
-    INSTALLED = {*(pkg.key for pkg in working_set if pkg.key)}
-    if MISSING:=[m for m in REQUIRED if m.lower() not in INSTALLED]:
-        if len(MISSING) > 1:
-            logger.warning(f'MISSING MODULES {", ".join(MISSING)}. ATTEMPTING AUTO-IMPORT')
-        else:
-            logger.warning(f'MISSING MODULE {MISSING[0]}. ATTEMPTING AUTO-IMPORT')
-        PYTHON = sys.executable
-        subprocess.check_call([PYTHON, '-m', 'pip', 'install', '--upgrade', *(MISSING + [])])
-
-    logger.info("Starting main process")
 
 import utils
 
@@ -47,7 +33,7 @@ import dbmgr
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(__name__), outputQueue=mp.Queue(), inputQueue=mp.Queue(200)):
+    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(200)):
         """Initialise the task distributor
 
         Args:
@@ -86,7 +72,7 @@ class taskDistributor:
         """
         if self.gui.exitcode is not None:
             self.logger.info("GUI closed, exiting")
-            self.__del__()
+            self.kill()
             exit(0)
         for worker in self.workers:
             worker.update()
@@ -108,15 +94,24 @@ class taskDistributor:
             self.nextautopass = (time.time(), False)
             return True
         # check if the task is valid
-        if len(task.data) != 2: return
+        if len(task.data) == 0: return
+
+        if len(task.data) >= 2:
+            joinedtask = utils.joinpredictions(task)
+        else:
+            joinedtask = utils.Task(task.id, task.data[0])
+        if len(joinedtask.data[1]) != 2: return
         # unpack the task data
-        bbox, (lp, conf) = task.data
+        bbox, (lp, conf) = joinedtask.data
         # check if the LP is in the database
+        self.logger.info(f"Checking LP: {lp}")
         if lp in self.dbmgr:
+        # if True:
             self.logger.info(f"Found valid LP: {lp}; {self.dbmgr[lp]}")
+            print(lp)
             return True
 
-    def __del__(self):
+    def kill(self):
         self.gui.kill()
         for worker in self.workers:
             try:
@@ -204,8 +199,9 @@ class workerHandler:
     def __del__(self):
         self.kill()
 
-
 if __name__ == "__main__":
+    config = configparser.ConfigParser()
+    config.read(f"{__file__}\\..\\config.ini")
     t = taskDistributor(logger)
     logger.info("Main process startup complete.")
     try:

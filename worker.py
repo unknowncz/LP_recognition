@@ -42,22 +42,24 @@ class Worker:
         while True:
             try:
                 task:utils.Task = self._Qrecv.get()
-                detections = self.detector(task.data)
-                img = utils.crop_image(task.data, detections)
-                text = ""
-                if img is not None:
-                    imgmean = np.mean(img)
-                    _, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
-                    cv2.imshow("img", img)
-                    cv2.waitKey(1)
-                    text = get_text(img)
-                    try:
-                        text = "".join(img)
-                    except:
-                        pass
+                text = []
+                if task.data is not None:
+                    detections = self.detector(task.data)
+                    img = utils.crop_image(task.data, detections)
+                    if img is not None:
+                        imgmean = np.mean(img)
+                        _, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
+                        cv2.imshow("img", img)
+                        cv2.waitKey(1)
+                        text = get_text(img)
+                        try:
+                            text = "".join(img)
+                        except:
+                            pass
                 self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
-                self.logger.error(f"Exception in worker", extra={'traceback':traceback.format_exc()})
+                self.logger.error(f"Exception in worker:")
+                self.logger.error(traceback.format_exception(e))
                 if type(e) == KeyboardInterrupt:
                     break
 

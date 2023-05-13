@@ -4,7 +4,6 @@ import logging
 from logging.handlers import QueueHandler
 import traceback
 
-
 import utils
 
 class Camera:
@@ -61,8 +60,8 @@ class Camera:
         """
         # files = [f for f in os.listdir(f"{__file__}\\..\\LP_Detection\\train")]
         # i = 0
+        ret2 = False
         while True:
-
             # frame = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\{files[i]}")
             # if not files[i].endswith(".jpg"): continue
             # try:
@@ -76,8 +75,12 @@ class Camera:
             try:
                 ret, frame = self._vcap.read()
                 if not ret:
-                    self.logger.critical('Failed to grab frame')
-                    break
+                    if not ret2:
+                        self.logger.critical('Failed to grab frame')
+                    ret2 = True
+                elif ret2:
+                    self.logger.info('Camera is back online')
+                    ret2 = False
                 try:
                     self._output.put_nowait(utils.Task(self._id, frame))
                 except mp.queues.Full:

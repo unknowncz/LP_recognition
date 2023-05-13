@@ -228,3 +228,18 @@ def crop_image(img, detections, threshold=0.5):
             x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
             return img[y1:y2, x1:x2]
 
+def joinpredictions(task:Task):
+    """Joins the predictions of the task from list[bbox, (prediction, confidence))] to [bbox, prediction, confidence]
+
+    Args:
+        task (Task): Input task containing a list of predictions
+
+    Returns:
+        Task: Output task containing a list of predictions of length 1
+    """
+    
+    conf = np.average([pred[1][1] for pred in task.data])
+    text = ''.join([pred[1][0] for pred in task.data if pred[1][1] > 0.5])
+    # calculate the bounding box of the license plate from the bounding boxes of the different predictions
+    bbox = [min([pred[0][0] for pred in task.data]), min([pred[0][1] for pred in task.data]), max([pred[0][2] for pred in task.data]), max([pred[0][3] for pred in task.data])]
+    return Task(task.id, data=[bbox, (text, conf)])
