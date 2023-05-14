@@ -3,9 +3,6 @@ from sys import stdout
 import configparser
 import logging
 from logging.handlers import QueueHandler, QueueListener
-import sys
-import subprocess
-from pkg_resources import working_set
 import time
 
 # TODO:
