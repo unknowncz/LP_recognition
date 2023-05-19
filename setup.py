@@ -6,7 +6,6 @@ import subprocess
 config = configparser.ConfigParser()
 config.read(f"{__file__}\\..\\config.ini")
 
-
 REQUIRED = config['GENERAL']['MODULES'].split(', ') + []
 '''Check if required modules are installed, if not, attempt to install them'''
 INSTALLED = {*(pkg.key for pkg in working_set if pkg.key)}

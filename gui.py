@@ -28,8 +28,7 @@ class GUImgr:
         self.DBmgr = db
         self.mgr = mgr
 
-        self.subwindows = {}
-        self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget()}
+        self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget(), 'settings':QtWidgets.QWidget()}
         self.centralwidgets.setdefault('main', self.centralwidgets['main'])
 
         self.logger = logging.getLogger()
@@ -41,9 +40,12 @@ class GUImgr:
         self.cw.addWidget(self.centralwidgets['main'])
         self.cw.addWidget(self.centralwidgets['cameramanager'])
         self.cw.addWidget(self.centralwidgets['dbmanager'])
+        self.cw.addWidget(self.centralwidgets['settings'])
         self.window.setCentralWidget(self.cw)
         layout = QtWidgets.QHBoxLayout(self.cw.currentWidget())
         self.window.setMinimumSize(1250, 600)
+        # make the window frameless
+        #self.window.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint)
         self.centralwidgets.setdefault('main', self.cw)
 
 # ---------------------------- MAIN LAYOUT --------------------------------
@@ -64,24 +66,35 @@ class GUImgr:
         layout.addWidget(helperwidget)
 
         # create three buttons
-        funcs = [self.cameramgr, self.dbmgr, self.manualoverride]
         btn_txt = ['Camera Manager', 'DB Manager', 'Manual Override']
         buttons = [QtWidgets.QPushButton(i) for i in btn_txt]
+        # make the manual override button pulse green when it is clicked
+        self.manualoverride_btn = buttons[2]
+        anim = QtCore.QVariantAnimation()
+        anim.setStartValue(255)
+        anim.setEndValue(1)
+        anim.setDuration(10000)
+        anim.valueChanged.connect(lambda x: self.manualoverride_btn.setStyleSheet(f'background-color: rgba(0, 255, 0, {int(x)})'))
+        anim.finished.connect(lambda: self.manualoverride_btn.setStyleSheet(''))
+        #anim.setLoopCount(1)
+        funcs = [self.cameramgr, self.dbmgr, lambda:(self.manualoverride(), anim.start())]
+        # connect the functions
         [i.clicked.connect(funcs[j]) for j, i in enumerate(buttons)]
+
         # add the buttons to the layout
         for i in buttons:
             button_layout.addWidget(i)
         button_layout.addStretch()
+
 
         # add a bottom row of buttons
         button_layout2 = QtWidgets.QHBoxLayout()
         button_layout.addLayout(button_layout2)
         buttons2 = [QtWidgets.QPushButton(['Settings', 'Exit'][i]) for i in range(2)]
         buttons2[1].clicked.connect(self.kill)
-        buttons2[0].clicked.connect(self.settingswindow)
+        buttons2[0].clicked.connect(self.switchtosettings)
         for i in buttons2:
             button_layout2.addWidget(i)
-
 
         # create an unwriteable text box for the logger output
         self.loggerout = QtWidgets.QTextEdit()
@@ -218,41 +231,166 @@ class GUImgr:
 
         layout.addWidget(scroll)
 
-        # add the add row button
-        # self.dbbuttons[-1].clicked.connect(self.adddbrow)
-        # self.dbbutton_layout.addStretch()
-
         # add the back button
         back_btn = QtWidgets.QPushButton('Back')
         layout.addWidget(back_btn)
         back_btn.clicked.connect(lambda:(self.resetdbchanges(),self.resetContent()))
-        # helperwidget.setMinimumWidth(200)
-        # helperwidget.setMaximumWidth(200)
 
+
+        # settings window
+        # |--------------------------------------------------|
+        # | [QLabel]: [Setting]                              |
+        # | [QLabel]: [Setting]                              |
+        # | [QLabel]: [Setting]                              |
+        # | [QLabel]: [Setting]                              |
+        # |                                                  |
+        # |                                                  |
+        # | [cancel]                                 [apply] |
+        # | [                    back                      ] |
+        # |--------------------------------------------------|
+
+        # add a vertical layout for the buttons as the first item in the layout
+        self.settingslayout = QtWidgets.QVBoxLayout()
+        centerwidget = self.centralwidgets['settings']
+        centerwidget.setLayout(self.settingslayout)
+
+        # add each entry in the config file to the layout
+        widgettypes = {'int':QtWidgets.QSpinBox, 'float':QtWidgets.QDoubleSpinBox, 'str':QtWidgets.QLineEdit, 'bool':QtWidgets.QCheckBox}
+        self.translatetable = {'bool':lambda x:True if x=='True' else False, 'int':int, 'float':float, 'str':str}
+        for row in self.config['USER']:
+            value, widgettype = self.config['USER'][row].split(', ')
+            self._addWidgetPair(row, widgettypes[widgettype](), self.settingslayout)
+            # set the value of the widget
+            self.modifyWidget(self.settingslayout, self.settingslayout.count()-1, self.translatetable[widgettype](value))
+            # add a stretch so the settings aren't as wide
+            self.settingslayout.itemAt(self.settingslayout.count()-1).layout().addStretch()
+
+        self.settingslayout.addStretch()
+        # add the cancel and apply buttons
+        cancelbtn = QtWidgets.QPushButton('Cancel')
+        applybtn = QtWidgets.QPushButton('Apply')
+        cancelbtn.setMinimumWidth(100)
+        applybtn.setMinimumWidth(100)
+
+        l = QtWidgets.QHBoxLayout()
+        cancelbtn.clicked.connect(self.resetsettings)
+        applybtn.clicked.connect(lambda:(self.applysettings(), self.resetsettings()))
+        l.addStretch(2)
+        l.addWidget(cancelbtn)
+        l.addStretch(3)
+        l.addWidget(applybtn)
+        l.addStretch(2)
+        self.settingslayout.addLayout(l)
+
+        # add the back button
+        back_btn = QtWidgets.QPushButton('Back')
+        self.settingslayout.addWidget(back_btn)
+        back_btn.clicked.connect(lambda:(self.resetsettings(),self.resetContent()))
+
+        self.applysettings()
 
         # exec and kill
         self.app.exec()
         self.kill()
 
-    def settingswindow(self):
-        """Create a new window for the settings. If the window is already open, bring it to the front. To be phased out.
+# ---------------------------- GENERIC FUNCTIONS --------------------------------
+    def _addWidgetPair(self, label:str, widget:QtWidgets.QWidget, layout:QtWidgets.QLayout):
+        """Add a label and widget pair to a layout (QLabel, widget)
+
+        Args:
+            label (str): Label to be displayed next to the widget
+            widget (QWidget): Widget to be added
+            layout (QLayout): Layout to hold the label and widget
         """
-        # make a new window if the settings button is clicked and the window is not already open
-        if type(window:=self.subwindows.get('settings', None)) == utils.SubWindow:
-            # window already open, bring it to the front
-            window.show()
-            window.setWindowState(QtCore.Qt.WindowState.WindowActive)
-            window.raise_()
-            return
-        window = utils.SubWindow(title="Settings")
-        window.setMinimumSize(500, 250)
+        l = QtWidgets.QHBoxLayout()
+        l.addWidget(QtWidgets.QLabel(label))
+        l.addWidget(widget)
+        layout.addLayout(l)
 
-        layout = QtWidgets.QVBoxLayout(window)
-        layout.addWidget(QtWidgets.QLabel("Settings"))
-        # window.centralWidget.setLayout(layout)
-        self.subwindows |= {'settings':window}
-        window.show()
+    def modifyWidget(self, layout:QtWidgets.QLayout, index:int, value):
+        """Modify the passed widgets contents.
 
+        Args:
+            layout (QLayout): QLayout holding the widget.
+            index (int): Index of the widget in the layout.
+            value (Any): The QWidget will be set to this value.
+        """
+        w = layout.itemAt(index).layout().itemAt(1).widget()
+        # you cannot directly access the object methods, so we need a match-case
+        match (value.__class__.__name__):
+            case ['int', 'float']:
+                w.setValue(value)
+            case 'str':
+                w.setText(value)
+            case 'bool':
+                w.setChecked(value)
+
+    def getwidgetvalue(self, layout:QtWidgets.QLayout, index:int):
+        """Get the value of a widget in a layout
+
+        Args:
+            layout (QLayout): QLayout holding the widget.
+            index (int): Index of the widget in the layout.
+
+        Returns:
+            Any: The value of the widget
+        """
+        w = layout.itemAt(index).layout().itemAt(1).widget()
+        match (w.__class__.__name__):
+            case ['QSpinBox', 'QDoubleSpinBox']:
+                return w.value()
+            case 'QLineEdit':
+                return w.text()
+            case 'QCheckBox':
+                return w.isChecked()
+
+    def resetContent(self):
+        """Reset the content of the main window to the main widget
+        """
+        self.cw.setCurrentWidget(self.centralwidgets['main'])
+        self.camerawidget.setCurrentIndex(0)
+
+    def kill(self):
+        self.app.exit()
+
+# ---------------------------- SETTINGS FUNCTIONS --------------------------------
+    def switchtosettings(self):
+        """Show the settings widget
+        """
+        self.cw.setCurrentWidget(self.centralwidgets['settings'])
+
+    def resetsettings(self):
+        """Reset the settings to the values written in the config
+        """
+        for idx in range(self.settingslayout.count()-3):
+            value, widgettype = self.config['USER'][self.settingslayout.itemAt(idx).layout().itemAt(0).widget().text()].split(', ')
+            self.modifyWidget(self.settingslayout, idx, self.translatetable[widgettype](value))
+
+    def applysettings(self):
+        """Apply the settings and write them to the config file
+        """
+        # write the settings to the config file
+        for idx in range(self.settingslayout.count()-3):
+            key = self.settingslayout.itemAt(idx).layout().itemAt(0).widget().text()
+            value = self.getwidgetvalue(self.settingslayout, idx)
+            self.config['USER'][key] = f'{value}, {value.__class__.__name__}'
+        # write the config file
+        with open('config.ini', 'w') as f:
+            self.config.write(f)
+        # apply the settings
+        self.applysettingsfunc()
+
+    def applysettingsfunc(self):
+        """Apply the settings to the program
+        """
+        # apply the settings to the program
+        if self.config['USER']['darkmode'] == 'True, bool':
+            with open(f'{__file__}\\..\\style.qss', 'r') as f:
+                self.app.setStyleSheet(f.read())
+        else:
+            self.app.setStyleSheet('')
+
+# ---------------------------- CAMERA FUNCTIONS --------------------------------
     def camdetails(self, camid:int):
         """Show the settings for the camera with the given id
 
@@ -267,6 +405,68 @@ class GUImgr:
         """
         self.cw.setCurrentWidget(self.centralwidgets['cameramanager'])
 
+    def addcamera(self):
+        """Add a new camera to the camera manager
+        """
+        # add a new camera to the config file
+        # this will also add a new section to the config file
+        # the new section will be named CAM_{num_cameras}
+        # the new section will have the following options
+
+        # create a new section
+        self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin'}
+        # update the number of cameras
+        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])+1)
+
+        # apply the current camera config
+        if self.camerawidget.currentIndex() != 0:
+            self.camerawidget.currentWidget().apply()
+
+        # create a new camera object
+        self.cambuttons.insert(-2, QtWidgets.QPushButton(f'Camera {str(int(self.config["GENERAL"]["num_cameras"])-1)}'))
+        self.cambutton_layout.insertWidget(len(self.cambuttons)-3, self.cambuttons[-3])
+        self.cameras.append(Camera(self.config, int(self.config["GENERAL"]["num_cameras"])-1, self, self.cambuttons[-3]))
+        self.camerawidget.addWidget(self.cameras[-1])
+        self.camerawidget.setCurrentIndex(len(self.cameras))
+        # apply the new camera config
+        self.cameras[-1].apply()
+
+    def deletecamera(self, id:int):
+        """Delete a camera from the camera manager given its id
+
+        Args:
+            id (int): ID of the camera to be deleted
+        """
+        # delete the camera with the given id
+
+        # remove the camera from the config file
+        # update the number of cameras
+        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
+        # move all sections with a higher id down one
+        for i in range(id, int(self.config['GENERAL']['num_cameras'])):
+            self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
+
+        self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
+        # remove the last camera from the camera list
+        self.cameras[-1].button.deleteLater()
+        self.cameras.pop()
+        # apply the current camera config
+        for i in range(int(self.config['GENERAL']['num_cameras'])):
+            self.cameras[i].updateId(i)
+            self.cameras[i].reset()
+
+        # remove the last camera from the camera list
+        # remove the camera button
+        self.cambutton_layout.removeWidget(self.cambuttons.pop(-3))
+        # reset the current camera
+        self.camerawidget.setCurrentIndex(0)
+
+        # write the config file
+        for i in range(int(self.config['GENERAL']['num_cameras'])):
+            self.cameras[i].apply()
+
+
+# ---------------------------- DATABASE FUNCTIONS --------------------------------
     def dbmgr(self):
         """Show the database manager widget
         """
@@ -318,94 +518,13 @@ class GUImgr:
             # set the text to the default value
         self.dblayout.setRowMinimumHeight(row, 20)
 
+
+# ---------------------------- MANUAL OVERRIDE FUNCTION --------------------------------
     def manualoverride(self):
         """Manually override the parent check for the next 10 seconds
         """
         self.mgr.nextautopass = (time.time() + 10, True)
 
-    def resetContent(self):
-        """Reset the content of the main window to the main widget
-        """
-        self.cw.setCurrentWidget(self.centralwidgets['main'])
-        self.camerawidget.setCurrentIndex(0)
-
-    def _addWidgetPair(self, label:str, widget, layout):
-        """Add a label and widget pair to a layout (QLabel, widget)
-
-        Args:
-            label (str): Label to be displayed next to the widget
-            widget (QWidget): Widget to be added
-            layout (QLayout): Layout to hold the label and widget
-        """
-        l = QtWidgets.QHBoxLayout()
-        l.addWidget(QtWidgets.QLabel(label))
-        l.addWidget(widget)
-        layout.addLayout(l)
-
-    def addcamera(self):
-        """Add a new camera to the camera manager
-        """
-        # add a new camera to the config file
-        # this will also add a new section to the config file
-        # the new section will be named CAM_{num_cameras}
-        # the new section will have the following options
-
-        # create a new section
-        self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin'}
-        # update the number of cameras
-        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])+1)
-
-        # apply the current camera config
-        if self.camerawidget.currentIndex() != 0:
-            self.camerawidget.currentWidget().apply()
-
-        # create a new camera object
-        self.cambuttons.insert(-2, QtWidgets.QPushButton(f'Camera {str(int(self.config["GENERAL"]["num_cameras"])-1)}'))
-        self.cambutton_layout.insertWidget(len(self.cambuttons)-3, self.cambuttons[-3])
-        self.cameras.append(Camera(self.config, int(self.config["GENERAL"]["num_cameras"])-1, self, self.cambuttons[-3]))
-        self.camerawidget.addWidget(self.cameras[-1])
-        self.camerawidget.setCurrentIndex(len(self.cameras))
-        # apply the new camera config
-        self.cameras[-1].apply()
-
-    def deletecamera(self, id):
-        """Delete a camera from the camera manager given its id
-
-        Args:
-            id (int): ID of the camera to be deleted
-        """
-        # delete the camera with the given id
-
-        # remove the camera from the config file
-        # update the number of cameras
-        self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
-        # move all sections with a higher id down one
-        for i in range(id, int(self.config['GENERAL']['num_cameras'])):
-            self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
-                # self.cameras[i].updateId(i-1)
-                # self.config.remove_section(f'CAM_{i+1}')
-
-        self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
-        # remove the last camera from the camera list
-        self.cameras[-1].button.deleteLater()
-        self.cameras.pop()
-        # apply the current camera config
-        for i in range(int(self.config['GENERAL']['num_cameras'])):
-            self.cameras[i].updateId(i)
-            self.cameras[i].reset()
-
-        # remove the last camera from the camera list
-        # remove the camera button
-        self.cambutton_layout.removeWidget(self.cambuttons.pop(-3))
-        # reset the current camera
-        self.camerawidget.setCurrentIndex(0)
-
-        # write the config file
-        for i in range(int(self.config['GENERAL']['num_cameras'])):
-            self.cameras[i].apply()
-
-    def kill(self):
-        self.app.exit()
 
 class Camera(QtWidgets.QWidget):
     """Helper class to manage the camera settings and controls
@@ -488,10 +607,16 @@ class Camera(QtWidgets.QWidget):
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
         cfg = {'id':self.id}|{k:v for k, v in self.config.items(f'CAM_{self.id}')}
-        layout.addWidget(QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop()))
+        btn = QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop())
+        btn.setMinimumWidth(75)
+        layout.addWidget(btn)
         layout.addStretch()
-        layout.addWidget(QtWidgets.QPushButton("Reset", clicked=self.reset))
-        layout.addWidget(QtWidgets.QPushButton("Apply", clicked=self.apply))
+        btn2 = QtWidgets.QPushButton("Reset", clicked=self.reset)
+        btn2.setMinimumWidth(75)
+        layout.addWidget(btn2)
+        btn3 = QtWidgets.QPushButton("Apply", clicked=self.apply)
+        btn3.setMinimumWidth(75)
+        layout.addWidget(btn3)
         return layout
 
     def reset(self):

@@ -3,9 +3,6 @@ from typing import Any
 from multiprocessing import Queue
 from PyQt6.QtWidgets import QTextEdit, QWidget
 import PyQt6.QtCore as QtCore
-from subprocess import check_call
-from sys import executable
-from pkg_resources import working_set
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -151,10 +148,7 @@ class FeedManager:
         """
         self.cam = {}
         self.stop_feed = True
-        # self.thread.join()
         self.logger.info('Camera feed stopped')
-        # cv2.destroyAllWindows()
-        # self.thread = None
 
     def livefeed_thread(self, camcfg:dict):
         """Live feed thread function. Opens the live feed for the camera and displays it in a window.
@@ -162,9 +156,6 @@ class FeedManager:
         Args:
             camcfg (dict): Camera configuration dictionary
         """
-        # cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
-        # capture the video from the camera with a timeout of 5 seconds
-        # if the camera connects, the timeout is cancelled
         cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
         stream_ok = True
         frame_ok = True
@@ -182,7 +173,10 @@ class FeedManager:
                         self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
                     cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
-                    cv2.waitKey(1)
+                    key = cv2.waitKey(1)
+                    # stop the feed if the escape key is pressed
+                    if key == 27:
+                        self.stop()
                 else:
                     if frame_ok:
                         self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
@@ -237,7 +231,7 @@ def joinpredictions(task:Task):
     Returns:
         Task: Output task containing a list of predictions of length 1
     """
-    
+
     conf = np.average([pred[1][1] for pred in task.data])
     text = ''.join([pred[1][0] for pred in task.data if pred[1][1] > 0.5])
     # calculate the bounding box of the license plate from the bounding boxes of the different predictions

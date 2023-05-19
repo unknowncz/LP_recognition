@@ -7,6 +7,7 @@ import logging
 import logging.handlers as log_handlers
 import traceback
 import paddleocr
+
 OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
 
 import utils

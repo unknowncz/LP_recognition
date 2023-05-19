@@ -13,7 +13,7 @@ class DatabaseHandler:
         """
         self.logger = logger
         self.path = path
-        with open(path, "r") as f:
+        with open(path, "r", encoding='UTF-8') as f:
             reader = csv.reader(f)
             self.database = {}
             for row in reader:
@@ -29,7 +29,7 @@ class DatabaseHandler:
     def save(self):
         """Write the data to the .csv file.
         """
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding='UTF-8') as f:
             writer = csv.writer(f)
             for k, v in self.database.items():
                 writer.writerow([str(k), str(v)])

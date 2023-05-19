@@ -51,27 +51,14 @@ class Camera:
                 return
         except:traceback.print_exc();return
 
-
         if autostart:
             self.run()
 
     def run(self):
         """Start sending frames to the output queue.
         """
-        # files = [f for f in os.listdir(f"{__file__}\\..\\LP_Detection\\train")]
-        # i = 0
         ret2 = False
         while True:
-            # frame = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\{files[i]}")
-            # if not files[i].endswith(".jpg"): continue
-            # try:
-            #     self._output.put_nowait(Task(self._id, frame))
-            #     # print(f"Added task {i}")
-            #     i += 1
-            #     if i >= len(files)-2: i=0
-            # except mp.queues.Full:
-            #     pass
-            # continue
             try:
                 ret, frame = self._vcap.read()
                 if not ret:
@@ -94,9 +81,3 @@ class Camera:
 
     def __delete__(self):
         self._vcap.release()
-
-
-
-if __name__ == "__main__":
-    cam = Camera(0, "192.168.1.150", 554)
-    cam.connect(True, login='admin', password='admin')
