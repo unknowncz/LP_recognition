@@ -5,10 +5,10 @@ class DatabaseHandler:
     """Helper class to work with data.
     """
     def __init__(self, path:str, logger=logging.getLogger(__name__)):
-        """Initialize the class and load the data
+        """Initialize the class and load the data.
 
         Args:
-            path (str): Path to the .csv data source
+            path (str): Path to the .csv data source.
             logger (logging.Logger, optional): logger. Defaults to logging.getLogger(__name__).
         """
         self.logger = logger

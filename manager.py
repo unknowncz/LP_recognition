@@ -59,7 +59,7 @@ class taskDistributor:
 
         self.workers = [workerHandler(i, outputQueue=self.outQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
 
-        self.cameras = [CameraHandler(i, (config[f'CAM_{i}']['IP'], int(config[f'CAM_{i}']['PORT'])), self.inQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_CAMERAS']))]
+        self.cameras = [CameraHandler(i, self.inQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_CAMERAS']))]
 
         self.logger.info(f"Created {len(self.workers)} worker(s) with {len(self.cameras)} camera(s) as inputs")
         self.logger.info("Starting main loop")
@@ -125,22 +125,23 @@ class taskDistributor:
 class CameraHandler:
     """Wrapper class for the camera process for easier management
     """
-    def __init__(self, id=-1, addr=("127.0.0.1", 80), inputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue()):
+    def __init__(self, id=-1, inputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue()):
         """Initialise the camera handler and start the camera process
 
         Args:
             id (int, optional): Camera process ID. Defaults to -1.
-            addr (tuple, optional): Target IP adress and port of the camera. Defaults to ("127.0.0.1", 80).
             inputQueue (mp.Queue, optional): Collected frames will be put here in the utils.task form. Defaults to mp.Queue().
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
         """
         # start the camera process
-        self._process = mp.Process(target=camera.Camera, args=(id, addr, inputQueue, loggerQueue, True, config[f'CAM_{id}']['LOGIN'], config[f'CAM_{id}']['PASSWORD']))
+        cfg = {k:v for k,v in config[f'CAM_{id}'].items()}
+        cfg |= {"id":id}
+        self._process = mp.Process(target=camera.Camera, args=(cfg, inputQueue, loggerQueue, True))
         self._process.start()
-        self._id = id
+        self.cfg = cfg
 
     def kill(self):
-        self._process.terminate()
+        self._process.kill()
 
 
 class workerHandler:

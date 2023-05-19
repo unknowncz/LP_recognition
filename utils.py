@@ -156,7 +156,7 @@ class FeedManager:
         Args:
             camcfg (dict): Camera configuration dictionary
         """
-        cap = cv2.VideoCapture('rtsp://{login}:{password}@{ip}:{port}'.format(**camcfg))
+        cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
         stream_ok = True
         frame_ok = True
         while True:
@@ -204,11 +204,11 @@ class FeedManager:
 
 
 def crop_image(img, detections, threshold=0.5):
-    """Crops the image to the bounding box of the detected license plate
+    """Crops the image to the bounding box of the detected license plate.
 
     Args:
-        img (np.ndarray): Image to be processed
-        detections (Tensor): Tensor containing the bounding boxes of the detected license plates
+        img (np.ndarray): Image to be processed.
+        detections (Tensor): Tensor containing the bounding boxes of the detected license plates.
         threshold (float, optional): Required threshold for the detection to pass. Defaults to 0.5.
 
     Returns:

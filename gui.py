@@ -86,7 +86,6 @@ class GUImgr:
             button_layout.addWidget(i)
         button_layout.addStretch()
 
-
         # add a bottom row of buttons
         button_layout2 = QtWidgets.QHBoxLayout()
         button_layout.addLayout(button_layout2)
@@ -414,7 +413,7 @@ class GUImgr:
         # the new section will have the following options
 
         # create a new section
-        self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin'}
+        self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin', 'Protocol':'rtsp'}
         # update the number of cameras
         self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])+1)
 
@@ -553,6 +552,7 @@ class Camera(QtWidgets.QWidget):
         # # |   Port:     {port}                              |
         # # |   Login:    {field}                             |
         # # |   Password: {field}                             |
+        # # |   Protocol: {field}                             |
         # # |                                                 |
         # # |   [Delete camera]                               |
         # # |   empty line                                    |
@@ -566,9 +566,8 @@ class Camera(QtWidgets.QWidget):
         self.layout.addWidget(self.title)
         # add the inputs
         self.inputs = {}
-        for i in ['IP', 'Port', 'Login', 'Password']:
+        for i in ['IP', 'Port', 'Login', 'Password', 'Protocol']:
             w = QtWidgets.QLineEdit()
-            self.inputs |= {i:w}
             l = QtWidgets.QHBoxLayout()
             self._addWidgetPair(i, w, l)
             self.layout.addLayout(l)
