@@ -84,39 +84,6 @@ class Detector:
         detections = self.model(input_tensor)
         return detections
 
-class SubWindow(QWidget):
-    """SubWindow class for the main window. To be phased out in the future.
-    """
-    def __init__(self, *args, title='SubWindow', **kwargs):
-        """Initialize the class.
-
-        Args:
-            title (str, optional): Window title. Defaults to 'SubWindow'.
-        """
-        super().__init__(*args, **kwargs)
-        self.setWindowTitle(title)
-
-    # hide the window when the minimize button is clicked
-    def changeEvent(self, event:QtCore.QEvent):
-        """Change event override. Hides the window when the minimize button is clicked.
-
-        Args:
-            event (QtCore.QEvent): PyQT event
-        """
-        if event.type() == QtCore.QEvent.Type.WindowStateChange:
-            if self.windowState() & QtCore.Qt.WindowState.WindowMinimized:
-                self.hide()
-                event.ignore()
-
-    def closeEvent(self, event:QtCore.QEvent):
-        """Close event override. Hides the window when the close button is clicked.
-
-        Args:
-            event (QtCore.QEvent): PyQT event
-        """
-        self.hide()
-        event.ignore()
-
 class FeedManager:
     """Feed manager class for managing the live feeds
     """

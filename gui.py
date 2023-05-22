@@ -36,6 +36,8 @@ class GUImgr:
 
         # layout for the main window
         self.window = QtWidgets.QMainWindow()
+
+        self.window.setWindowTitle('LP Detector')
         self.cw = QtWidgets.QStackedWidget()
         self.cw.addWidget(self.centralwidgets['main'])
         self.cw.addWidget(self.centralwidgets['cameramanager'])
@@ -43,7 +45,7 @@ class GUImgr:
         self.cw.addWidget(self.centralwidgets['settings'])
         self.window.setCentralWidget(self.cw)
         layout = QtWidgets.QHBoxLayout(self.cw.currentWidget())
-        self.window.setMinimumSize(1250, 600)
+        self.window.setMinimumSize(1000, 562)
         # make the window frameless
         #self.window.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint)
         self.centralwidgets.setdefault('main', self.cw)
@@ -352,6 +354,7 @@ class GUImgr:
     def kill(self):
         self.app.exit()
 
+
 # ---------------------------- SETTINGS FUNCTIONS --------------------------------
     def switchtosettings(self):
         """Show the settings widget
@@ -383,11 +386,9 @@ class GUImgr:
         """Apply the settings to the program
         """
         # apply the settings to the program
-        if self.config['USER']['darkmode'] == 'True, bool':
-            with open(f'{__file__}\\..\\style.qss', 'r') as f:
-                self.app.setStyleSheet(f.read())
-        else:
-            self.app.setStyleSheet('')
+        with open(f'{__file__}\\..\\style{"-darkmode" if self.config["USER"]["darkmode"] == "True, bool" else ""}.qss', 'r') as f:
+            self.app.setStyleSheet(f.read())
+
 
 # ---------------------------- CAMERA FUNCTIONS --------------------------------
     def camdetails(self, camid:int):

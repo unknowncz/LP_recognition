@@ -42,7 +42,7 @@ class Camera:
             ret ,_= self._vcap.read()
             if not ret:
                 self.logger.error(f"Failed to connect to camera {self.cfg['id']}", extra={'traceback':traceback.format_exc()})
-                return
+                exit(1)
         except:traceback.print_exc();return
 
         if autostart:
