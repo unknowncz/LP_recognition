@@ -28,6 +28,47 @@ class GUImgr:
         self.DBmgr = db
         self.mgr = mgr
 
+        hw = QtWidgets.QWidget()
+        hw.setLayout(QtWidgets.QVBoxLayout())
+        hw.layout().setContentsMargins(0, 0, 0, 0)
+        # add a custom title bar
+        self.titlebar = QtWidgets.QWidget()
+        self.titlebar.setFixedHeight(30)
+        self.titlebar.setObjectName('titlebar')
+        self.titlebar.setLayout(QtWidgets.QHBoxLayout())
+        self.titlebar.layout().setContentsMargins(0, 0, 0, 0)
+        self.titlebar.layout().setSpacing(0)
+        # setup the custom window move event
+        self.dragPos = None
+        self.titlebar.mousePressEvent = self.moveWindow
+        self.titlebar.mouseMoveEvent = self.moveWindow
+
+        # add a label for the title
+        self.title = QtWidgets.QLabel('   ' + 'LP Detector')
+        self.title.setMinimumHeight(30)
+        self.titlebar.layout().addWidget(self.title)
+
+        # add a button for closing the window
+        self.close = QtWidgets.QPushButton('x')
+        self.close.setFixedSize(30, 30)
+        self.close.setObjectName('closebtn')
+        # align the button to the right using a widget to maintain the style
+        self.closehelper = QtWidgets.QWidget()
+        self.closehelper.setLayout(QtWidgets.QHBoxLayout())
+        self.closehelper.layout().setContentsMargins(0, 0, 0, 0)
+        self.closehelper.layout().setSpacing(0)
+        self.closehelper.layout().addStretch()
+        self.titlebar.layout().addWidget(self.closehelper)
+
+        self.close.clicked.connect(lambda: self.kill())
+        self.titlebar.layout().addWidget(self.close)
+
+        # add the title bar to the main window
+        hw.layout().addWidget(self.titlebar)
+
+        for i in self.titlebar.children():
+            i.setObjectName('titlebarContent')
+
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget(), 'settings':QtWidgets.QWidget()}
         self.centralwidgets.setdefault('main', self.centralwidgets['main'])
 
@@ -43,11 +84,12 @@ class GUImgr:
         self.cw.addWidget(self.centralwidgets['cameramanager'])
         self.cw.addWidget(self.centralwidgets['dbmanager'])
         self.cw.addWidget(self.centralwidgets['settings'])
-        self.window.setCentralWidget(self.cw)
+        self.window.setCentralWidget(hw)
+        hw.layout().addWidget(self.cw)
         layout = QtWidgets.QHBoxLayout(self.cw.currentWidget())
         self.window.setMinimumSize(1000, 562)
         # make the window frameless
-        #self.window.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint)
+        self.window.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint)
         self.centralwidgets.setdefault('main', self.cw)
 
 # ---------------------------- MAIN LAYOUT --------------------------------
@@ -350,6 +392,22 @@ class GUImgr:
         """
         self.cw.setCurrentWidget(self.centralwidgets['main'])
         self.camerawidget.setCurrentIndex(0)
+
+    def moveWindow(self, event:QtCore.QEvent):
+        """Move the window with the mouse
+
+        Args:
+            event (QEvent): Mouse event
+        """
+        if self.dragPos == None:
+            self.dragPos = event.globalPosition()
+            event.accept()
+            return
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.dragPos = event.globalPosition()
+        self.window.move(self.window.pos() + event.globalPosition().toPoint() - self.dragPos.toPoint())
+        self.dragPos = event.globalPosition()
+        event.accept()
 
     def kill(self):
         self.app.exit()
