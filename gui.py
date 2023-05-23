@@ -38,6 +38,7 @@ class GUImgr:
         self.titlebar.setLayout(QtWidgets.QHBoxLayout())
         self.titlebar.layout().setContentsMargins(0, 0, 0, 0)
         self.titlebar.layout().setSpacing(0)
+        self.titlebar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         # setup the custom window move event
         self.dragPos = None
         self.titlebar.mousePressEvent = self.moveWindow
