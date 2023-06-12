@@ -331,6 +331,7 @@ class GUImgr:
         self.settingslayout.addWidget(back_btn)
         back_btn.clicked.connect(lambda:(self.resetsettings(),self.resetContent()))
 
+        self.resetsettings()
         self.applysettings()
 
         # exec and kill
