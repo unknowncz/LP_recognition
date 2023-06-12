@@ -53,10 +53,6 @@ class Worker:
                         cv2.imshow("img", img)
                         cv2.waitKey(1)
                         text = get_text(img)
-                        try:
-                            text = "".join(img)
-                        except:
-                            pass
                 self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
                 self.logger.error(f"Exception in worker:")

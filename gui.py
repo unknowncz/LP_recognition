@@ -300,9 +300,10 @@ class GUImgr:
 
         # add each entry in the config file to the layout
         widgettypes = {'int':QtWidgets.QSpinBox, 'float':QtWidgets.QDoubleSpinBox, 'str':QtWidgets.QLineEdit, 'bool':QtWidgets.QCheckBox}
-        self.translatetable = {'bool':lambda x:True if x=='True' else False, 'int':int, 'float':float, 'str':str}
+        widgettypes = {'int':QtWidgets.QSpinBox, 'float':QtWidgets.QDoubleSpinBox, 'str':QtWidgets.QLineEdit, 'bool':QtWidgets.QCheckBox, 'list':QtWidgets.QComboBox}
+        self.translatetable = {'bool':lambda x:True if x=='True' else False, 'int':int, 'float':float, 'str':str, 'list':lambda x:x}
         for row in self.config['USER']:
-            value, widgettype = self.config['USER'][row].split(', ')
+            *value, widgettype = self.config['USER'][row].split(', ')
             self._addWidgetPair(row, widgettypes[widgettype](), self.settingslayout)
             # set the value of the widget
             self.modifyWidget(self.settingslayout, self.settingslayout.count()-1, self.translatetable[widgettype](value))
@@ -368,6 +369,10 @@ class GUImgr:
                 w.setText(value)
             case 'bool':
                 w.setChecked(value)
+            case 'list':
+                raise NotImplementedError()
+                w.addItems(value)
+                w.setCurrentIndex(0)
 
     def getwidgetvalue(self, layout:QtWidgets.QLayout, index:int):
         """Get the value of a widget in a layout
@@ -387,6 +392,9 @@ class GUImgr:
                 return w.text()
             case 'QCheckBox':
                 return w.isChecked()
+            case 'QComboBox':
+                raise NotImplementedError()
+                return [w.currentText(),]
 
     def resetContent(self):
         """Reset the content of the main window to the main widget
@@ -395,7 +403,7 @@ class GUImgr:
         self.camerawidget.setCurrentIndex(0)
 
     def moveWindow(self, event:QtCore.QEvent):
-        """Move the window with the mouse
+        """Move the window with the mouse when a mouse event is triggered
 
         Args:
             event (QEvent): Mouse event
@@ -434,7 +442,8 @@ class GUImgr:
         for idx in range(self.settingslayout.count()-3):
             key = self.settingslayout.itemAt(idx).layout().itemAt(0).widget().text()
             value = self.getwidgetvalue(self.settingslayout, idx)
-            self.config['USER'][key] = f'{value}, {value.__class__.__name__}'
+            strvalue = re.escape(str(value))
+            self.config['USER'][key] = f'{strvalue}, {value.__class__.__name__}'
         # write the config file
         with open('config.ini', 'w') as f:
             self.config.write(f)

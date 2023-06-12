@@ -5,6 +5,7 @@ import logging
 from logging.handlers import QueueHandler, QueueListener
 import time
 
+
 # TODO:
 #  - GUI - config control, camera control, worker control
 #  - Logging - finalise logging system (last thing to do)
@@ -121,7 +122,6 @@ class taskDistributor:
             except:
                 pass
 
-
 class CameraHandler:
     """Wrapper class for the camera process for easier management
     """
@@ -142,7 +142,6 @@ class CameraHandler:
 
     def kill(self):
         self._process.kill()
-
 
 class workerHandler:
     """Wrapper class for the worker process for easier management
@@ -197,6 +196,7 @@ class workerHandler:
     def __del__(self):
         self.kill()
 
+
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(f"{__file__}\\..\\config.ini")
@@ -204,8 +204,10 @@ if __name__ == "__main__":
     logger.info("Main process startup complete.")
     try:
         while True:
-            if not t.outQ.empty() and t.outQ.qsize():
+            if not t.outQ.empty():
                 t.check(t.outQ.get(block=True))
+            else:
+                time.sleep(0.05)
             t.distribute()
     except KeyboardInterrupt:
         logger.info("Main process shutdown.")

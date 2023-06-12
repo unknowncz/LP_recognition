@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
-from PyQt6.QtWidgets import QTextEdit, QWidget
+from PyQt6.QtWidgets import QTextEdit
 import PyQt6.QtCore as QtCore
 import tensorflow as tf
 import numpy as np
@@ -12,14 +12,14 @@ import logging
 import time
 
 
-@dataclass
+@dataclass(slots=True)
 class Task:
     """Task utilized when transporting data between processes
     """
     id: int
     data: Any
-    img: Any=None
-    pos:Any=None
+    # img: Any=None
+    # pos: Any=None
 
 # create a stream for the logger to output to the text box
 class LoggerOutput(logging.handlers.QueueHandler):
@@ -183,9 +183,9 @@ def crop_image(img, detections, threshold=0.5):
     """
     boxes = detections['detection_boxes'][0].numpy()
     scores = detections['detection_scores'][0].numpy()
-    for i, score in enumerate(scores):
+    for idx, score in enumerate(scores):
         if score > threshold:
-            ymin, xmin, ymax, xmax = boxes[i]
+            ymin, xmin, ymax, xmax = boxes[idx]
             x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
             return img[y1:y2, x1:x2]
 
