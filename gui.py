@@ -299,7 +299,6 @@ class GUImgr:
         centerwidget.setLayout(self.settingslayout)
 
         # add each entry in the config file to the layout
-        widgettypes = {'int':QtWidgets.QSpinBox, 'float':QtWidgets.QDoubleSpinBox, 'str':QtWidgets.QLineEdit, 'bool':QtWidgets.QCheckBox}
         widgettypes = {'int':QtWidgets.QSpinBox, 'float':QtWidgets.QDoubleSpinBox, 'str':QtWidgets.QLineEdit, 'bool':QtWidgets.QCheckBox, 'list':QtWidgets.QComboBox}
         self.translatetable = {'bool':lambda x:True if x=='True' else False, 'int':int, 'float':float, 'str':str, 'list':lambda x:x}
         for row in self.config['USER']:
@@ -442,8 +441,7 @@ class GUImgr:
         for idx in range(self.settingslayout.count()-3):
             key = self.settingslayout.itemAt(idx).layout().itemAt(0).widget().text()
             value = self.getwidgetvalue(self.settingslayout, idx)
-            strvalue = re.escape(str(value))
-            self.config['USER'][key] = f'{strvalue}, {value.__class__.__name__}'
+            self.config['USER'][key] = f'{value}, {value.__class__.__name__}'
         # write the config file
         with open('config.ini', 'w') as f:
             self.config.write(f)
