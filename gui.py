@@ -11,10 +11,12 @@ import time
 import utils
 import dbmgr
 
+SELFDIR = f'{__file__}/..'
+
 class GUImgr:
     """GUI manager class for the main window
     """
-    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{__file__}\\..\\lp.csv'), mgr=None):
+    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), mgr=None):
         """Initialize the class and the GUI
 
         Args:
@@ -24,7 +26,7 @@ class GUImgr:
         """
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
-        self.config.read(f'{__file__}\\..\\config.ini')
+        self.config.read(f'{SELFDIR}/config.ini')
         self.DBmgr = db
         self.mgr = mgr
 
@@ -50,9 +52,16 @@ class GUImgr:
         self.titlebar.layout().addWidget(self.title)
 
         # add a button for closing the window
-        self.close = QtWidgets.QPushButton('x')
+        # load the image for the button
+        closeicon = QtGui.QIcon(f'{SELFDIR}/src/img/close.svg')
+        self.close = QtWidgets.QPushButton()
         self.close.setFixedSize(30, 30)
         self.close.setObjectName('closebtn')
+        self.close.setIcon(closeicon)
+        self.close.setIconSize(QtCore.QSize(30, 30))
+        #self.close = QtWidgets.QPushButton('x')
+        #self.close.setFixedSize(30, 30)
+        #self.close.setObjectName('closebtn')
         # align the button to the right using a widget to maintain the style
         self.closehelper = QtWidgets.QWidget()
         self.closehelper.setLayout(QtWidgets.QHBoxLayout())
@@ -453,7 +462,7 @@ class GUImgr:
         """Apply the settings to the program
         """
         # apply the settings to the program
-        with open(f'{__file__}\\..\\style{"-darkmode" if self.config["USER"]["darkmode"] == "True, bool" else ""}.qss', 'r') as f:
+        with open(f'{SELFDIR}/src/stylesheet/style{"-darkmode" if self.config["USER"]["darkmode"] == "True, bool" else ""}.qss', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -699,7 +708,7 @@ class Camera(QtWidgets.QWidget):
         # apply the inputs to the config file
         for i in self.inputs:
             self.config[f'CAM_{self.id}'][i] = self.inputs[i].text()
-        self.config.write(open(f'{__file__}\\..\\config.ini', 'w'), True)
+        self.config.write(open(f'{SELFDIR}/config.ini', 'w'), True)
         self.reset()
 
     def updateId(self, id:int):

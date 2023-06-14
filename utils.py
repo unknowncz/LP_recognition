@@ -3,13 +3,13 @@ from typing import Any
 from multiprocessing import Queue
 from PyQt6.QtWidgets import QTextEdit
 import PyQt6.QtCore as QtCore
-import tensorflow as tf
+from tensorflow import keras, saved_model, convert_to_tensor, newaxis
+from threading import Thread
+from logging.handlers import QueueHandler
+import logging
 import numpy as np
 import cv2
-import threading
-import logging.handlers
-import logging
-import time
+from time import time
 
 
 @dataclass(slots=True)
@@ -22,7 +22,7 @@ class Task:
     # pos: Any=None
 
 # create a stream for the logger to output to the text box
-class LoggerOutput(logging.handlers.QueueHandler):
+class LoggerOutput(QueueHandler):
     """A handler class which writes logging records, appropriately formatted, to a QTextEdit
     """
     def __init__(self, queue:Queue=None, *args, reciever_meta:QtCore.QMetaObject, reciever:QTextEdit, formatter:logging.Formatter, **kwargs):
@@ -58,9 +58,9 @@ class Detector:
             path (str): Path to the model for license plate detection
         """
         try:
-            self.model = tf.saved_model.load(path, *args, **kwargs)
-            self.wrappedmodel = tf.keras.Sequential()
-            self.wrappedmodel.add(tf.keras.layers.Lambda(lambda x: self.model(x)['detection_boxes']))
+            self.model = saved_model.load(path, *args, **kwargs)
+            self.wrappedmodel = keras.Sequential()
+            self.wrappedmodel.add(keras.layers.Lambda(lambda x: self.model(x)['detection_boxes']))
         except OSError:
             print('Unable to load model')
             self.model = lambda x:x
@@ -79,8 +79,8 @@ class Detector:
             tensor: Tensor containing the bounding boxes of the detected license plates
         """
         image_np = np.array(img)
-        input_tensor = tf.convert_to_tensor(image_np)
-        input_tensor = input_tensor[tf.newaxis, ...]
+        input_tensor = convert_to_tensor(image_np)
+        input_tensor = input_tensor[newaxis, ...]
         detections = self.model(input_tensor)
         return detections
 
@@ -106,7 +106,7 @@ class FeedManager:
         """
         self.cam = camcfg
         self.stop_feed = False
-        self.thread = threading.Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
+        self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
         self.logger.info(f'Camera {camcfg["id"]} feed started')
         self.thread.start()
 
@@ -155,11 +155,11 @@ class FeedManager:
                 if not frame_ok:
                 # start of missing video
                     stream_ok = False
-                    no_frame_start_time = time.time()
+                    no_frame_start_time = time()
             else:
                 if not frame_ok:
                 # still no video
-                    if time.time() - no_frame_start_time > 5:
+                    if time() - no_frame_start_time > 5:
                         self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
                         break
                 else:

@@ -1,33 +1,34 @@
-import multiprocessing as mp
-import numpy as np
+from multiprocessing import Queue
+import numpy as np # possibly remove
 import cv2
-import cv2.data
-import time
 import logging
-import logging.handlers as log_handlers
+from logging.handlers import QueueHandler
 import traceback
 import paddleocr
+if __name__ == "__main__":
+    import time
 
 OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
+SELFDIR = f'{__file__}/..'
 
 import utils
 
 class Worker:
     """A worker class to process tasks from a queue and put the results in another queue
     """
-    def __init__(self, qrecv:mp.Queue, qsend:mp.Queue, loggerQueue=mp.Queue(), detector=utils.Detector(f'{__file__}\\..\\saved_model\\saved_model'), *_, autostart=False, **__) -> None:
+    def __init__(self, qrecv:Queue, qsend:Queue, loggerQueue=Queue(), detector=utils.Detector(f'{SELFDIR}/saved_model/saved_model'), *_, autostart=False, **__) -> None:
         """Initialize the worker
 
         Args:
-            qrecv (mp.Queue): Receiver queue for communication.
-            qsend (mp.Queue): Transmitter queue for communication.
-            loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
+            qrecv (Queue): Receiver queue for communication.
+            qsend (Queue): Transmitter queue for communication.
+            loggerQueue (Queue, optional): Queue for logging connections. Defaults to multiprocessing.Queue().
             detector (utils.Detector, optional): Licence Plate detector class. Defaults to utils.Detector(f'{__file__}\..\saved_model\saved_model').
             autostart (bool, optional): Automatically start the main loop, if set to false, the 'run' method needs to be called separately. Defaults to False.
         """
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
-        handler = log_handlers.QueueHandler(loggerQueue)
+        handler = QueueHandler(loggerQueue)
         self.logger.addHandler(handler)
 
         self.detector = detector
@@ -50,8 +51,8 @@ class Worker:
                     if img is not None:
                         imgmean = np.mean(img)
                         _, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
-                        cv2.imshow("img", img)
-                        cv2.waitKey(1)
+                        #cv2.imshow("img", img)
+                        #cv2.waitKey(1)
                         text = get_text(img)
                 self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
@@ -85,10 +86,10 @@ def get_text(img, ocr=OCR):
 
 if __name__ == '__main__':
     print("-------------------")
-    detector = utils.Detector(f'{__file__}\\..\\saved_model\\saved_model')
+    detector = utils.Detector(f'{SELFDIR}/saved_model/saved_model')
 
-    img = cv2.imread(f"{__file__}\\..\\LP_Detection\\train\\1af54be605a0f1d5_jpg.rf.34325727380de220fcd244b900430c97.jpg")
-    # img = cv2.imread(f"{__file__}\\..\\test17.jpg")
+    img = cv2.imread(f"{SELFDIR}/LP_Detection/train/1af54be605a0f1d5_jpg.rf.34325727380de220fcd244b900430c97.jpg")
+    # img = cv2.imread(f"{SELFDIR}/test17.jpg")
 
     # cv2.imshow('img', img)
     # cv2.waitKey(0)

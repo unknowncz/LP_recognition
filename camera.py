@@ -1,4 +1,4 @@
-import multiprocessing as mp
+from multiprocessing import Queue, queues
 import cv2
 import logging
 from logging.handlers import QueueHandler
@@ -9,13 +9,13 @@ import utils
 class Camera:
     """A class to represent a camera and its connection to the system.
     """
-    def __init__(self, cfg:dict, output=mp.Queue(), loggerQueue=mp.Queue(), autoconnect=False):
+    def __init__(self, cfg:dict, output=Queue(), loggerQueue=Queue(), autoconnect=False):
         """Initialize the class. If autoconnect is set to True, the camera will connect automatically.
 
         Args:
             cfg (dict): Camara config as a dictionary.
-            output (mp.Queue, optional): Queue for the camera frames. Defaults to mp.Queue().
-            loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
+            output (Queue, optional): Queue for the camera frames. Defaults to multiprocessing.Queue().
+            loggerQueue (Queue, optional): Queue for logging connections. Defaults to multiprocessing.Queue().
             autoconnect (bool, optional): Automatically connect to the camera. Defaults to False.
         """
         # add logging and logging queue
@@ -64,10 +64,11 @@ class Camera:
                     ret2 = False
                 try:
                     self._output.put_nowait(utils.Task(self.cfg['id'], frame))
-                except mp.queues.Full:
+                except queues.Full:
                     pass
             except Exception as e:
-                self.logger.error(f"Failed to read from camera {self.cfg['id']}", extra={'traceback':e.with_traceback()})
+                self.logger.error(f"Failed to read from camera {self.cfg['id']}")
+                self.logger.error(traceback.format_exc())
                 if type(e) == KeyboardInterrupt:
                     break
 

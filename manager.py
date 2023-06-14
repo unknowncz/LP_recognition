@@ -1,22 +1,24 @@
 import multiprocessing as mp
 from sys import stdout
-import configparser
+from configparser import ConfigParser
 import logging
 from logging.handlers import QueueHandler, QueueListener
-import time
+from time import time, sleep
+import os
+if __name__ == "__main__":
+    mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
+SELFDIR = f'{__file__}/..'
 
 # TODO:
-#  - GUI - config control, camera control, worker control
-#  - Logging - finalise logging system (last thing to do)
-#  - Config file saving - save config file on exit
+#  - Logging - finalise logging system (colors, formatting, etc.)
 
 logger = mp.get_logger()
 logger.addHandler(logging.StreamHandler(stdout))
 if __name__ == "__main__":
     # logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s")
 
-    logger.addHandler(logging.FileHandler(f"{__file__}\\..\\log", mode='w'))
+    logger.addHandler(logging.FileHandler(f"{SELFDIR}/log", mode='w'))
     logger.setLevel(logging.INFO)
 
 
@@ -44,8 +46,8 @@ class taskDistributor:
         self.loggerQueue = mp.Queue()
         self.outQ = outputQueue
         self.inQ = inputQueue
-        self.dbmgr = dbmgr.DatabaseHandler(f"{__file__}\\..\\lp.csv", logger=self.logger)
-        self.nextautopass = (time.time(), False)
+        self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
+        self.nextautopass = (time(), False)
 
         self.guiQueue = mp.Queue()
         self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr, self))
@@ -87,9 +89,9 @@ class taskDistributor:
             Bool: Success
         """
         # check if the manual override is active, if so, the check passes automatically
-        if self.nextautopass[1] and time.time() < self.nextautopass[0]:
+        if self.nextautopass[1] and time() < self.nextautopass[0]:
             self.logger.info(f"Manual override trigerred")
-            self.nextautopass = (time.time(), False)
+            self.nextautopass = (time(), False)
             return True
         # check if the task is valid
         if len(task.data) == 0: return
@@ -136,7 +138,7 @@ class CameraHandler:
         # start the camera process
         cfg = {k:v for k,v in config[f'CAM_{id}'].items()}
         cfg |= {"id":id}
-        self._process = mp.Process(target=camera.Camera, args=(cfg, inputQueue, loggerQueue, True))
+        self._process = mp.Process(target=camera.Camera, args=(cfg, inputQueue, loggerQueue, True), name=f"Camera_{id}_process")
         self._process.start()
         self.cfg = cfg
 
@@ -159,7 +161,7 @@ class workerHandler:
         # setup communication queues
         self._Qsend, self._Qrecv = mp.Queue(), mp.Queue()
         # start the worker process
-        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True})
+        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True}, name=f"Worker_{id}_process")
         self._process.start()
         self._id = id
         self.busy = False
@@ -198,8 +200,8 @@ class workerHandler:
 
 
 if __name__ == "__main__":
-    config = configparser.ConfigParser()
-    config.read(f"{__file__}\\..\\config.ini")
+    config = ConfigParser()
+    config.read(f"{SELFDIR}/config.ini")
     t = taskDistributor(logger)
     logger.info("Main process startup complete.")
     try:
@@ -207,7 +209,7 @@ if __name__ == "__main__":
             if not t.outQ.empty():
                 t.check(t.outQ.get(block=True))
             else:
-                time.sleep(0.05)
+                sleep(0.05)
             t.distribute()
     except KeyboardInterrupt:
         logger.info("Main process shutdown.")
