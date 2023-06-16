@@ -7,11 +7,12 @@ from multiprocessing import Queue
 from sys import stdout
 import configparser
 import time
+import os
 
 import utils
 import dbmgr
 
-SELFDIR = f'{__file__}/..'
+SELFDIR = os.path.abspath(f'{__file__}/..')
 
 class GUImgr:
     """GUI manager class for the main window

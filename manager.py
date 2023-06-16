@@ -8,7 +8,7 @@ import os
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
-SELFDIR = f'{__file__}/..'
+SELFDIR = os.path.abspath(f'{__file__}/..')
 
 # TODO:
 #  - Logging - finalise logging system (colors, formatting, etc.)
