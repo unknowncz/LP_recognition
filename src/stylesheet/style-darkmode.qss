@@ -38,6 +38,11 @@ QPushButton:pressed {
     color: #ffffff;
 }
 
+#log {
+    font-family: "Cascadia Mono";
+    font-size: 14px;
+}
+
 #titlebar, #titlebarContent {
     background-color: #1F1F1F;
     border-bottom: 1px solid #1F1F1F;

@@ -38,8 +38,10 @@ QLineEdit {
     border: 1px solid #BBBBBB;
 }
 
-QTextEdit {
+#log {
     border: 1px solid #DDDDDD;
+    font-family: "Cascadia Mono";
+    font-size: 14px;
 }
 
 #titlebar, #titlebarContent {

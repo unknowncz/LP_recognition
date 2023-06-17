@@ -152,10 +152,10 @@ class GUImgr:
 
         # create an unwriteable text box for the logger output
         self.loggerout = QtWidgets.QTextEdit()
+        self.loggerout.setObjectName('log')
         self.loggerout.setReadOnly(True)
         self.loggerout.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.NoWrap)
         self.loggerout.setWordWrapMode(QtGui.QTextOption.WrapMode.NoWrap)
-        self.loggerout.setFont(QtGui.QFont("Cascadia Mono", 10))
         layout.addWidget(self.loggerout)
         self.window.show()
 
