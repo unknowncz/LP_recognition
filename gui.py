@@ -1,6 +1,6 @@
-import PyQt6.QtWidgets as QtWidgets
-import PyQt6.QtGui as QtGui
-import PyQt6.QtCore as QtCore
+import PyQt5.QtWidgets as QtWidgets
+import PyQt5.QtGui as QtGui
+import PyQt5.QtCore as QtCore
 import logging
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
@@ -419,14 +419,16 @@ class GUImgr:
             event (QEvent): Mouse event
         """
         if self.dragPos == None:
-            self.dragPos = event.globalPosition()
+            self.dragPos = event.pos()
             event.accept()
             return
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            self.dragPos = event.globalPosition()
-        self.window.move(self.window.pos() + event.globalPosition().toPoint() - self.dragPos.toPoint())
-        self.dragPos = event.globalPosition()
-        event.accept()
+            self.dragPos = event.pos()
+            event.accept()
+
+        if event.type() == QtCore.QEvent.MouseMove:
+            self.window.move(self.window.pos() + event.pos() - self.dragPos)
+            event.accept()
 
     def kill(self):
         self.app.exit()

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
-from PyQt6.QtWidgets import QTextEdit
-import PyQt6.QtCore as QtCore
+from PyQt5.QtWidgets import QTextEdit
+import PyQt5.QtCore as QtCore
 from tensorflow import keras, saved_model, convert_to_tensor, newaxis
 from threading import Thread
 from logging.handlers import QueueHandler
