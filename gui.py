@@ -371,18 +371,22 @@ class GUImgr:
             value (Any): The QWidget will be set to this value.
         """
         w = layout.itemAt(index).layout().itemAt(1).widget()
-        # you cannot directly access the object methods, so we need a match-case
-        match (value.__class__.__name__):
-            case ['int', 'float']:
-                w.setValue(value)
-            case 'str':
-                w.setText(value)
-            case 'bool':
-                w.setChecked(value)
-            case 'list':
-                raise NotImplementedError()
-                w.addItems(value)
-                w.setCurrentIndex(0)
+        # you cannot directly access the object methods, so we need a match-case or match-case equivalent
+        val = value.__class__.__name__
+        if val in ['int', 'float']:
+            w.setValue(value)
+            return
+        if val in ['str',]:
+            w.setText(value)
+            return
+        if val in ['bool',]:
+            w.setChecked(value)
+            return
+        if val in ['list']:
+            raise NotImplementedError()
+            w.addItems(value)
+            w.setCurrentIndex(0)
+            return
 
     def getwidgetvalue(self, layout:QtWidgets.QLayout, index:int):
         """Get the value of a widget in a layout
@@ -395,16 +399,16 @@ class GUImgr:
             Any: The value of the widget
         """
         w = layout.itemAt(index).layout().itemAt(1).widget()
-        match (w.__class__.__name__):
-            case ['QSpinBox', 'QDoubleSpinBox']:
-                return w.value()
-            case 'QLineEdit':
-                return w.text()
-            case 'QCheckBox':
-                return w.isChecked()
-            case 'QComboBox':
-                raise NotImplementedError()
-                return [w.currentText(),]
+        val = w.__class__.__name__
+        if val in ['QSpinBox', 'QDoubleSpinBox']:
+            return w.value()
+        if val in ['QLineEdit',]:
+            return w.text()
+        if val in ['QCheckBox',]:
+            return w.isChecked()
+        if val in ['QComboBox',]:
+            raise NotImplementedError()
+            return [w.currentText(),]
 
     def resetContent(self):
         """Reset the content of the main window to the main widget

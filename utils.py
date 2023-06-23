@@ -12,7 +12,7 @@ import cv2
 from time import time
 
 
-@dataclass(slots=True)
+@dataclass
 class Task:
     """Task utilized when transporting data between processes
     """
