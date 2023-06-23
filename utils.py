@@ -63,7 +63,7 @@ class Detector:
             self.wrappedmodel = keras.Sequential()
             self.wrappedmodel.add(keras.layers.Lambda(lambda x: self.model(x)['detection_boxes']))
         except OSError:
-            print('Unable to load model')
+            self.logger.error('Unable to load model')
             self.model = lambda x:x
             self.wrappedmodel = lambda x:x
 
