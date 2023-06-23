@@ -10,6 +10,7 @@ import logging
 import numpy as np
 import cv2
 from time import time
+import sys
 
 
 @dataclass
@@ -104,6 +105,12 @@ class FeedManager:
         Args:
             camcfg (dict): Camera configuration dictionary
         """
+
+        # if the system is on linux, the camera feed will be unavailable (opencv-headless)
+        if 'linux' in sys.platform:
+            self.logger.warning('Camera feed unavailable on linux')
+            return
+
         self.cam = camcfg
         self.stop_feed = False
         self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
