@@ -16,7 +16,7 @@ import utils
 class Worker:
     """A worker class to process tasks from a queue and put the results in another queue
     """
-    def __init__(self, qrecv:Queue, qsend:Queue, loggerQueue=Queue(), detector=utils.Detector(f'{SELFDIR}/saved_model/saved_model'), *_, autostart=False, **__) -> None:
+    def __init__(self, qrecv:Queue, qsend:Queue, loggerQueue=Queue(), *_, detector=utils.Detector(f'{SELFDIR}/saved_model/saved_model'), autostart=False, **__) -> None:
         """Initialize the worker
 
         Args:

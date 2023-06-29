@@ -59,8 +59,15 @@ class taskDistributor:
         self.loggerQueueListener = QueueListener(self.loggerQueue, *self.logger.handlers)
         self.loggerQueueListener.start()
 
+        # determine which model type to use
+        if config['GENERAL']['MODEL_TYPE'] == 'lite':
+            model_type = 'lite'
+        elif config['GENERAL']['MODEL_TYPE'] == 'tf':
+            model_type = 'tf'
 
-        self.workers = [workerHandler(i, outputQueue=self.outQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
+        # start the worker and camera processes
+
+        self.workers = [workerHandler(i, outputQueue=self.outQ, loggerQueue=self.loggerQueue, model_type=model_type) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
 
         self.cameras = [CameraHandler(i, self.inQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_CAMERAS']))]
 
@@ -148,7 +155,7 @@ class CameraHandler:
 class workerHandler:
     """Wrapper class for the worker process for easier management
     """
-    def __init__(self, id=-1, callback=lambda *_:None, outputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue()):
+    def __init__(self, id=-1, callback=lambda *_:None, outputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue(), model_type='tf'):
         """Initialise the worker handler and start the worker process
 
         Args:
@@ -156,12 +163,20 @@ class workerHandler:
             callback (function, optional): Callback on successful return from task. Defaults to lambda*_:None.
             outputQueue (mp.Queue, optional): Queue for outputting finished tasks. Defaults to mp.Queue().
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
+            model_type (str, optional): Model type to use. Defaults to 'tf'.
         """
         self.logger = logging.getLogger(__name__)
         # setup communication queues
         self._Qsend, self._Qrecv = mp.Queue(), mp.Queue()
+        # setup detection model
+        if model_type == 'tf':
+            self.logger.info("Using TensorFlow model")
+            self._model = utils.Detector(f"{SELFDIR}/saved_model/saved_model")
+        elif model_type == 'lite':
+            self.logger.info("Using TensorFlow Lite model")
+            self._model = utils.Detector(f"{SELFDIR}/quant_model.tflite")
         # start the worker process
-        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True}, name=f"Worker_{id}_process")
+        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True, "detector":self._model}, name=f"Worker_{id}_process")
         self._process.start()
         self._id = id
         self.busy = False

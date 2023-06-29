@@ -3,7 +3,7 @@ from typing import Any
 from multiprocessing import Queue
 from PyQt5.QtWidgets import QTextEdit
 import PyQt5.QtCore as QtCore
-from tensorflow import keras, saved_model, convert_to_tensor, newaxis
+from tensorflow import keras, saved_model, convert_to_tensor, newaxis, lite
 from threading import Thread
 from logging.handlers import QueueHandler
 import logging
@@ -84,6 +84,38 @@ class Detector:
         input_tensor = input_tensor[newaxis, ...]
         detections = self.model(input_tensor)
         return detections
+
+class LiteDetector(Detector):
+    def __init__(self, path: str, *args, **kwargs):
+        """Initialize the class and load the model
+
+        Args:
+            path (str): Path to the model for license plate detection
+        """
+        self.interpreter = lite.Interpreter(model_path=path)
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
+
+    def __call__(self, img):
+        """Detect license plates in the image
+
+        Args:
+            img (np.ndarray): Image to be processed
+
+        Returns:
+            tensor: Tensor containing the bounding boxes of the detected license plates
+        """
+        img = cv2.resize(img, (640, 640))
+        image_np = np.array(img)
+        input_tensor = convert_to_tensor(image_np)
+        input_tensor = input_tensor[newaxis, ...]
+        self.interpreter.set_tensor(self.input_details[0]['index'], input_tensor)
+        self.interpreter.invoke()
+        conf = self.interpreter.get_tensor(self.output_details[0]['index'])
+        boxes = self.interpreter.get_tensor(self.output_details[1]['index'])
+        return {'detection_scores':conf, 'detection_boxes':boxes}
+
 
 class FeedManager:
     """Feed manager class for managing the live feeds
