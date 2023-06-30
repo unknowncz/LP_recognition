@@ -174,7 +174,7 @@ class workerHandler:
             self._model = utils.Detector(f"{SELFDIR}/saved_model/saved_model")
         elif model_type == 'lite':
             self.logger.info("Using TensorFlow Lite model")
-            self._model = utils.LiteDetector(f"{SELFDIR}/saved_model/quant_model.tflite")
+            self._model = utils.LiteDetector(f"{SELFDIR}/saved_model/model.tflite")
         # start the worker process
         self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True, "detector":self._model}, name=f"Worker_{id}_process")
         self._process.start()
