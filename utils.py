@@ -19,8 +19,6 @@ class Task:
     """
     id: int
     data: Any
-    # img: Any=None
-    # pos: Any=None
 
 # create a stream for the logger to output to the text box
 class LoggerOutput(QueueHandler):
