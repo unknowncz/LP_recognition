@@ -219,8 +219,8 @@ def crop_image(img, detections, threshold=0.5):
     Returns:
         np.ndarray: Cropped image
     """
-    boxes = detections['detection_boxes'][0].numpy()
-    scores = detections['detection_scores'][0].numpy()
+    boxes = np.ndarray(*detections['detection_boxes'][0])
+    scores = np.ndarray(*detections['detection_scores'][0])
     for idx, score in enumerate(scores):
         if score > threshold:
             ymin, xmin, ymax, xmax = boxes[idx]
