@@ -106,7 +106,7 @@ class LiteDetector(Detector):
         """
         img = cv2.resize(img, (640, 640))
         image_np = np.array(img)
-        image_np = image_np / 255
+        image_np = (image_np / 255).astype(np.float32)
         input_tensor = convert_to_tensor(image_np)
         input_tensor = input_tensor[newaxis, ...]
         self.interpreter.set_tensor(self.input_details[0]['index'], input_tensor)
