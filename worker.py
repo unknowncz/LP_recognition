@@ -57,7 +57,7 @@ class Worker:
                 self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
                 self.logger.error(f"Exception in worker:")
-                self.logger.error(traceback.format_exception(e))
+                self.logger.error(traceback.format_exc(e))
                 if type(e) == KeyboardInterrupt:
                     break
 
