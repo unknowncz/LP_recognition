@@ -21,7 +21,7 @@ class Pin:
         self.name = pin_info['name']
         self.pinmode = pin_info['pinmode']
         if self.wPi == -1:
-            self.value = int(subprocess.check_output(f'gpio read {self.wPi}').strip())
+            self.value = self.read()
         else:
             self.value = -1
 
@@ -30,12 +30,12 @@ class Pin:
         if self.wPi == -1:
             raise ValueError('Cannot write to pin without wPi')
         self.value = value
-        subprocess.Popen(f'gpio write {self.wPi} {value}')
+        subprocess.Popen(['gpio', 'write', self.wPi, value])
 
     def read(self):
         if self.wPi == -1:
             raise ValueError('Cannot read from pin without wPi')
-        self.value = int(subprocess.check_output(f'gpio read {self.wPi}').strip())
+        self.value = int(subprocess.check_output(['gpio', 'read', self.wPi]))
         return self.value
 
 class GPIOmgr:
