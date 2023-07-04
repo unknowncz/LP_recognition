@@ -27,10 +27,14 @@ class Pin:
 
 
     def write(self, value:int):
+        if self.wPi == -1:
+            raise ValueError('Cannot write to pin without wPi')
         self.value = value
         subprocess.Popen(f'gpio write {self.wPi} {value}')
 
     def read(self):
+        if self.wPi == -1:
+            raise ValueError('Cannot read from pin without wPi')
         self.value = int(subprocess.check_output(f'gpio read {self.wPi}').strip())
         return self.value
 
@@ -42,10 +46,10 @@ class GPIOmgr:
         self.pinmap_GPIO = {pin.GPIO: pin for pin in pins if pin.GPIO != -1}
 
     def digitalwrite(self, pin_wPi:int, value:int):
-        subprocess.Popen(f'gpio write {pin_wPi} {value}'.split())
+        self.pinmap_wPi[pin_wPi].write(value)
 
     def digitalread(self, pin_wPi:int):
-        return int(subprocess.check_output(f'gpio read {pin_wPi}').strip())
+        return self.pinmap_wPi[pin_wPi].read()
 
     def phys2wPi(self, pin_physical:int):
         return self.pinmap_physical[pin_physical].wPi
