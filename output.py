@@ -13,6 +13,12 @@ class Pin:
         'name': '',
         'pinmode': None
     }
+
+    mode_translate = {
+        OPiTools.OUTPUT: 'OUTPUT',
+        OPiTools.INPUT: 'INPUT',
+        OPiTools.INPUT_PULLUP: 'INPUT_PULLUP'
+    }
     def __init__(self, **pin_info) -> None:
         # set default values
         for key, value in Pin.defaut_pin_info.items():
@@ -40,6 +46,11 @@ class Pin:
             raise ValueError('Cannot read from pin without wPi')
         self.value = int(subprocess.check_output(['gpio', 'read', str(self.wPi)]))
         return self.value
+
+    def mode(self, mode:int):
+        if self.wPi == -1:
+            raise ValueError('Cannot set mode to pin without wPi')
+        subprocess.Popen(['gpio', 'mode', str(self.wPi), Pin.mode_translate[mode]])
 
 class GPIOmgr:
     def __init__(self, pins:list) -> None:
@@ -82,14 +93,7 @@ class GPIOmgr:
         return pin_wPi in map(lambda pin: pin.wPi, input_pins)
 
     def setMode(self, pin_wPi:int, mode:int):
-        if mode == OPiTools.OUTPUT:
-            self.pinmap_wPi[pin_wPi].pinmode = OPiTools.OUTPUT
-        elif mode == OPiTools.INPUT:
-            self.pinmap_wPi[pin_wPi].pinmode = OPiTools.INPUT
-        elif mode == OPiTools.INPUT_PULLUP:
-            self.pinmap_wPi[pin_wPi].pinmode = OPiTools.INPUT_PULLUP
-        else:
-            raise ValueError(f'Invalid mode {mode}')
+        self.pinmap_wPi[pin_wPi].mode(mode)
 
 
 if __name__ == '__main__':
