@@ -33,12 +33,12 @@ class Pin:
         if self.wPi == -1:
             raise ValueError('Cannot write to pin without wPi')
         self.value = value
-        subprocess.Popen(['gpio', 'write', self.wPi, value])
+        subprocess.Popen(['gpio', 'write', str(self.wPi), str(value)])
 
     def read(self):
         if self.wPi == -1:
             raise ValueError('Cannot read from pin without wPi')
-        self.value = int(subprocess.check_output(['gpio', 'read', self.wPi]))
+        self.value = int(subprocess.check_output(['gpio', 'read', str(self.wPi)]))
         return self.value
 
 class GPIOmgr:
