@@ -14,16 +14,19 @@ class Pin:
         'pinmode': None
     }
     def __init__(self, **pin_info) -> None:
-        pin_info = {**self.defaut_pin_info, **pin_info}
+        # set default values
+        for key, value in Pin.defaut_pin_info.items():
+            if key not in pin_info:
+                pin_info[key] = value
         self.GPIO = pin_info['GPIO']
         self.wPi = pin_info['wPi']
         self.physical = pin_info['Physical']
         self.name = pin_info['name']
         self.pinmode = pin_info['pinmode']
         if self.wPi == -1:
-            self.value = self.read()
-        else:
             self.value = -1
+        else:
+            self.value = self.read()
 
 
     def write(self, value:int):
