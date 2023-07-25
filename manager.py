@@ -11,7 +11,8 @@ if __name__ == "__main__":
 SELFDIR = os.path.abspath(f'{__file__}/..')
 
 # TODO:
-#  - Logging - finalise logging system (colors, formatting, etc.)
+#  - add output callback to the taskDistributor class
+#  - update todo regularly
 
 logger = mp.get_logger()
 logger.addHandler(logging.StreamHandler(stdout))
@@ -28,18 +29,19 @@ import worker
 import camera
 import gui
 import dbmgr
+import output
 
 
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(200)):
+    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(50), successCallback=lambda *_:None):
         """Initialise the task distributor
 
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
             outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
-            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(200).
+            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(50).
         """
         self.config = config
         self.logger = logger
@@ -48,6 +50,7 @@ class taskDistributor:
         self.inQ = inputQueue
         self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
         self.nextautopass = (time(), False)
+        self.successCallback = successCallback
 
         self.guiQueue = mp.Queue()
         self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr, self))
@@ -60,10 +63,8 @@ class taskDistributor:
         self.loggerQueueListener.start()
 
         # determine which model type to use
-        if config['GENERAL']['MODEL_TYPE'] == 'lite':
-            model_type = 'lite'
-        elif config['GENERAL']['MODEL_TYPE'] == 'tf':
-            model_type = 'tf'
+        if config['GENERAL']['MODEL_TYPE'] in ['lite', 'tf']:
+            model_type = config['GENERAL']['MODEL_TYPE']
 
         # start the worker and camera processes
 
@@ -115,8 +116,8 @@ class taskDistributor:
         if lp in self.dbmgr:
         # if True:
             self.logger.info(f"Found valid LP: {lp}; {self.dbmgr[lp]}")
-            print(lp)
-            return True
+            # send callback
+            self.successCallback()
 
     def kill(self):
         self.gui.kill()
@@ -143,8 +144,8 @@ class CameraHandler:
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
         """
         # start the camera process
-        cfg = {k:v for k,v in config[f'CAM_{id}'].items()}
-        cfg |= {"id":id}
+        cfg = {"protocol":"rtsp", "port":554, "login":"admin", "password":"admin", "ip":"127.0.0.1", "id":id}
+        cfg |= {k:v for k,v in config[f'CAM_{id}'].items()}
         self._process = mp.Process(target=camera.Camera, args=(cfg, inputQueue, loggerQueue, True), name=f"Camera_{id}_process")
         self._process.start()
         self.cfg = cfg
@@ -168,15 +169,8 @@ class workerHandler:
         self.logger = logging.getLogger(__name__)
         # setup communication queues
         self._Qsend, self._Qrecv = mp.Queue(), mp.Queue()
-        # setup detection model
-        if model_type == 'tf':
-            self.logger.info("Using TensorFlow model")
-            self._model = utils.Detector(f"{SELFDIR}/saved_model/saved_model")
-        elif model_type == 'lite':
-            self.logger.info("Using TensorFlow Lite model")
-            self._model = utils.LiteDetector(f"{SELFDIR}/saved_model/model.tflite")
         # start the worker process
-        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True, "detector":self._model}, name=f"Worker_{id}_process")
+        self._process = mp.Process(target=worker.Worker, args=(self._Qsend, self._Qrecv, loggerQueue), kwargs={"autostart":True, "model_type":model_type}, name=f"Worker_{id}_process")
         self._process.start()
         self._id = id
         self.busy = False
@@ -217,7 +211,9 @@ class workerHandler:
 if __name__ == "__main__":
     config = ConfigParser()
     config.read(f"{SELFDIR}/config.ini")
-    t = taskDistributor(logger)
+    general = {k:v for k,v in config['GENERAL'].items()}
+    out = output.Outputmgr(general)
+    t = taskDistributor(logger, successCallback=out.trigger)
     logger.info("Main process startup complete.")
     try:
         while True:

@@ -1,4 +1,5 @@
 import subprocess
+import threading
 
 HIGH = 1
 LOW = 0
@@ -6,6 +7,10 @@ LOW = 0
 OUTPUT = 0
 INPUT = 1
 INPUT_PULLUP = 2
+
+RISING = 0
+FALLING = 1
+CHANGE = 2
 
 PINLIST = [
     {'name': '3.3V', 'Physical': 1, 'wPi': -1, 'GPIO': -1, 'pinmode': None},            {'name': '5V', 'Physical': 2, 'wPi': -1, 'GPIO': -1, 'pinmode': None},
@@ -78,6 +83,7 @@ class Pin:
 
 class GPIOmgr:
     def __init__(self, pins:list) -> None:
+        self._interrupts = {}
         self.pins = pins
         self.pinmap_physical = {pin.physical: pin for pin in pins}
         self.pinmap_wPi = {pin.wPi: pin for pin in pins if pin.wPi != -1}
@@ -118,3 +124,40 @@ class GPIOmgr:
 
     def setMode(self, pin_wPi:int, mode:int):
         self.pinmap_wPi[pin_wPi].mode(mode)
+
+    def attachinterrupt(self, id=-1, pin=-1, callback=lambda x:x, edge=RISING):
+        if id in self._interrupts:
+            raise ValueError(f'Cannot attach interrupt to pin {pin} as id {id} is already in use')
+        th = threading.Thread(target=self._interrupt, args=(id, pin, callback, edge), name=f'GPIO_interrupt_{id}')
+        th.start()
+        self._interrupts[id] = th
+
+    def _interrupt(self, id=-1, pin=-1, callback=lambda x:x, edge=RISING):
+        # listen for interrupts on a pin
+        # if an interrupt is detected, call the callback function
+
+        # check if the pin is readable
+        if not self.isReadable(pin):
+            raise ValueError(f'Cannot attach interrupt to pin {pin} as it is not readable')
+
+        last_value = self.pinmap_wPi[pin].read()
+        while self._stopinterrupt != id:
+            # wait for an interrupt
+            # if an interrupt is detected, call the callback function
+            value = self.pinmap_wPi[pin].read()
+            if value != last_value:
+                if edge == RISING and value == HIGH:
+                    callback(id)
+                elif edge == FALLING and value == LOW:
+                    callback(id)
+                elif edge == CHANGE:
+                    callback(id)
+
+    def get_num_interrupts(self):
+        return len(self._interrupts.items())
+
+    def detachinterrupt(self, id=-1):
+        if id in self._interrupts.keys():
+            self._stopinterrupt = id
+            self._interrupts[id].join()
+            del self._interrupts[id]
