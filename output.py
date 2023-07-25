@@ -107,7 +107,7 @@ class Outputhelper:
 
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
-        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.trigger, OPiTools.RISING)
+        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.mgr.trigger, OPiTools.RISING)
 
         self.mgr.addeventlistener(ENTER_EVENT, self.semaphore_enter)
         self.mgr.addeventlistener(TRIGGER_ENTER_EVENT, self.semaphore_trigger_enter)
@@ -156,7 +156,6 @@ if __name__ == '__main__':
     out = Outputmgr()
     gpio = OPiTools.GPIOmgr(OPiTools.PINLIST)
     outhelper = Outputhelper(out, gpio)
-    gpio.attachinterrupt(0, gpio.phys2wPi(7), out.trigger, OPiTools.RISING)
 
     exit(0)
     import time
