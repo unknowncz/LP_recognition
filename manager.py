@@ -212,8 +212,9 @@ if __name__ == "__main__":
     config = ConfigParser()
     config.read(f"{SELFDIR}/config.ini")
     general = {k:v for k,v in config['GENERAL'].items()}
+    pins = [output.OPiTools.Pin(**pin) for pin in output.OPiTools.PINLIST]
     out = output.Outputmgr()
-    gpio = output.OPiTools.GPIOmgr(output.OPiTools.PINLIST)
+    gpio = output.OPiTools.GPIOmgr(pins)
     outhelper = output.Outputhelper(out, gpio)
     t = taskDistributor(logger, successCallback=out.trigger)
     logger.info("Main process startup complete.")
