@@ -88,6 +88,7 @@ class GPIOmgr:
         self.pinmap_physical = {pin.physical: pin for pin in pins}
         self.pinmap_wPi = {pin.wPi: pin for pin in pins if pin.wPi != -1}
         self.pinmap_GPIO = {pin.GPIO: pin for pin in pins if pin.GPIO != -1}
+        self._stopinterrupt = -1
 
     def digitalwrite(self, pin_wPi:int, value:int):
         self.pinmap_wPi[pin_wPi].write(value)
@@ -152,6 +153,7 @@ class GPIOmgr:
                     callback(id)
                 elif edge == CHANGE:
                     callback(id)
+        self._stopinterrupt = -1
 
     def get_num_interrupts(self):
         return len(self._interrupts.items())

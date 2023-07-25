@@ -5,11 +5,12 @@ import logging
 from logging.handlers import QueueHandler
 import traceback
 import paddleocr
+import os
 if __name__ == "__main__":
     import time
 
 OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
-SELFDIR = f'{__file__}/..'
+SELFDIR = os.path.abspath(f'{__file__}/..')
 
 import utils
 
