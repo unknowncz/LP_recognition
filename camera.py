@@ -35,9 +35,11 @@ class Camera:
         Args:
             autostart (bool, optional): Start automatically after connecting. Defaults to False.
         """
-        self.logger.info(f"Connecting to camera {self.cfg['id']} at {self.cfg['ip']}:{self.cfg['port']}")
+        # self.logger.info(f"Connecting to camera {self.cfg['id']} at {self.cfg['ip']}:{self.cfg['port']}")
+        self.logger.info("Connecting to camera {id} at {ip}:{port}".format(**self.cfg))
 
-        self._vcap = cv2.VideoCapture(f"{self.cfg['protocol']}://{self.cfg['login']}:{self.cfg['password']}@{self.cfg['ip']}:{int(self.cfg['port'])}")
+        # self._vcap = cv2.VideoCapture(f"{self.cfg['protocol']}://{self.cfg['login']}:{self.cfg['password']}@{self.cfg['ip']}:{int(self.cfg['port'])}")
+        self._vcap = cv2.VideoCapture("{protocol}://{login}:{password}@{ip}:{port}".format(**self.cfg))
         try:
             ret ,_= self._vcap.read()
             if not ret:

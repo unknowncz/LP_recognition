@@ -5,18 +5,19 @@ import logging
 from logging.handlers import QueueHandler
 import traceback
 import paddleocr
+import os
 if __name__ == "__main__":
     import time
 
 OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
-SELFDIR = f'{__file__}/..'
+SELFDIR = os.path.abspath(f'{__file__}/..')
 
 import utils
 
 class Worker:
     """A worker class to process tasks from a queue and put the results in another queue
     """
-    def __init__(self, qrecv:Queue, qsend:Queue, loggerQueue=Queue(), *_, detector=utils.Detector(f'{SELFDIR}/saved_model/saved_model'), autostart=False, **__) -> None:
+    def __init__(self, qrecv:Queue, qsend:Queue, loggerQueue=Queue(), *_, model_type='lite', model_pth=None, autostart=False, **__) -> None:
         """Initialize the worker
 
         Args:
@@ -31,7 +32,21 @@ class Worker:
         handler = QueueHandler(loggerQueue)
         self.logger.addHandler(handler)
 
-        self.detector = detector
+        pth = f"{SELFDIR}/saved_model"
+        if model_pth is not None:
+            self.logger.info(f"Using custom model at {model_pth}")
+            pth = model_pth
+
+        # setup detection model
+        if model_type == 'tf':
+            self.logger.info("Using TensorFlow model")
+            self.detector = utils.Detector(f"{pth}/saved_model")
+        elif model_type == 'lite':
+            self.logger.info("Using TensorFlow Lite model")
+            self.detector = utils.LiteDetector(f"{pth}/model.tflite")
+        else:
+            self.logger.error("Invalid model type")
+            exit(1)
 
         self._Qrecv = qrecv
         self._Qsend = qsend

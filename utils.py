@@ -221,11 +221,13 @@ def crop_image(img, detections, threshold=0.5):
     """
     boxes = detections['detection_boxes'][0]
     scores = detections['detection_scores'][0]
-    for idx, score in enumerate(scores):
-        if score > threshold:
-            ymin, xmin, ymax, xmax = boxes[idx]
-            x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
-            return img[y1:y2, x1:x2]
+
+    max_score = max(enumerate(scores), key=lambda x:x[1])
+    if max_score[1] < threshold:
+        return None
+    ymin, xmin, ymax, xmax = boxes[max_score[0]]
+    x1, y1, x2, y2 = int(xmin * img.shape[1]), int(ymin * img.shape[0]), int(xmax * img.shape[1]), int(ymax * img.shape[0])
+    return img[y1:y2, x1:x2]
 
 def joinpredictions(task:Task):
     """Joins the predictions of the task from list[bbox, (prediction, confidence))] to [bbox, prediction, confidence]

@@ -689,7 +689,8 @@ class Camera(QtWidgets.QWidget):
         """
         # get the lower buttons
         layout = QtWidgets.QHBoxLayout()
-        cfg = {'id':self.id}|{k:v for k, v in self.config.items(f'CAM_{self.id}')}
+        cfg = {"protocol":"rtsp", "port":554, "login":"admin", "password":"admin", "ip":"127.0.0.1", "id":self.id}
+        cfg |= {k:v for k, v in self.config.items(f'CAM_{self.id}')}
         btn = QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop())
         btn.setMinimumWidth(75)
         layout.addWidget(btn)
