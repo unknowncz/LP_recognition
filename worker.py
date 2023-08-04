@@ -1,5 +1,5 @@
 from multiprocessing import Queue
-import numpy as np # possibly remove
+import numpy as np
 import cv2
 import logging
 from logging.handlers import QueueHandler
@@ -57,24 +57,24 @@ class Worker:
         """
         self.logger.info("Worker started")
         while True:
+            text = []
             try:
                 task:utils.Task = self._Qrecv.get()
-                text = []
                 if task.data is not None:
                     detections = self.detector(task.data)
                     img = utils.crop_image(task.data, detections, threshold=0.2)
-                    if img is not None:
+                    if img is not None and len(img) > 0:
                         #imgmean = np.mean(img)
                         #_, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
                         #cv2.imshow("img", img)
                         #cv2.waitKey(1)
                         text = get_text(img)
-                self._Qsend.put(utils.Task(id=task.id, data=text))
             except Exception as e:
                 self.logger.error(f"Exception in worker:")
                 self.logger.error(traceback.format_exc())
                 if type(e) == KeyboardInterrupt:
                     break
+            self._Qsend.put(utils.Task(id=task.id, data=text))
 
 def get_text(img, ocr=OCR):
     """Get text from an image.

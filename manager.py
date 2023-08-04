@@ -35,7 +35,7 @@ import output
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(50), successCallback=lambda *_:None):
+    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(10), successCallback=lambda *_:None):
         """Initialise the task distributor
 
         Args:
@@ -113,9 +113,11 @@ class taskDistributor:
         bbox, (lp, conf) = joinedtask.data
         # check if the LP is in the database
         self.logger.info(f"Checking LP: {lp}")
-        if lp in self.dbmgr:
+        if (valid := next((entry for entry in self.dbmgr if entry[0] in lp), None)) != None:
+        # if any([dbentry[0] in lp for dbentry in self.dbmgr]):
+        # if lp in self.dbmgr:
         # if True:
-            self.logger.info(f"Found valid LP: {lp}; {self.dbmgr[lp]}")
+            self.logger.info(f"Found valid LP: {valid[0]}; {valid[1]}")
             # send callback
             self.successCallback()
 

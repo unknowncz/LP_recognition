@@ -96,11 +96,11 @@ class Outputmgr:
 
 class Outputhelper:
     # temp pin definitions
-    RED = 0
-    YELLOW = 1
-    GREEN = 2
+    RED = 3
+    YELLOW = 5
+    GREEN = 7
 
-    INTERRUPT = 7
+    INTERRUPT = 8
     def __init__(self, mgr:Outputmgr, gpio:OPiTools.GPIOmgr) -> None:
         self.gpio = gpio
         self.mgr = mgr
