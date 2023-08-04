@@ -41,7 +41,7 @@ class taskDistributor:
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
             outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
-            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(50).
+            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(10).
         """
         self.config = config
         self.logger = logger
@@ -213,12 +213,7 @@ class workerHandler:
 if __name__ == "__main__":
     config = ConfigParser()
     config.read(f"{SELFDIR}/config.ini")
-    general = {k:v for k,v in config['GENERAL'].items()}
-    pins = [output.OPiTools.Pin(**pin) for pin in output.OPiTools.PINLIST]
-    out = output.Outputmgr()
-    gpio = output.OPiTools.GPIOmgr(pins)
-    outhelper = output.Outputhelper(out, gpio)
-    t = taskDistributor(logger, successCallback=out.trigger)
+    t = taskDistributor(logger)
     logger.info("Main process startup complete.")
     try:
         while True:
