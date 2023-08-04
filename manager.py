@@ -5,6 +5,7 @@ import logging
 from logging.handlers import QueueHandler, QueueListener
 from time import time, sleep
 import os
+import threading
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
@@ -218,6 +219,7 @@ if __name__ == "__main__":
     gpio = output.OPiTools.GPIOmgr(pins)
     outhelper = output.Outputhelper(out, gpio)
     t = taskDistributor(logger, successCallback=out.trigger)
+    outloopthread = threading.Thread(target=out.check_loop)
     logger.info("Main process startup complete.")
     try:
         while True:
@@ -227,5 +229,6 @@ if __name__ == "__main__":
                 sleep(0.05)
             t.distribute()
     except KeyboardInterrupt:
+        out.interrupt = True
         logger.info("Main process shutdown.")
         exit()

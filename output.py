@@ -60,10 +60,10 @@ class Outputmgr:
             for event in self.events:
                 if event['type'] == ENTER_EVENT:
                     event['callback']()
-        elif self.laststate == 'exit':
+        elif self.laststate == 'exit' or self.laststate == 'enter':
             self.next_state_change = time.time() + (time.time() - self.last_state_change)
             for event in self.events:
-                if event['type'] == TRIGGER_ENTER_EVENT:
+                if event['type'] == ENTER_EVENT:
                     event['callback']()
         self.laststate = self.state
         self.last_state_change = time.time()
@@ -152,10 +152,30 @@ class Outputhelper:
 
 
 if __name__ == '__main__':
+    import multiprocessing as mp
 
     out = Outputmgr()
-    gpio = OPiTools.GPIOmgr(OPiTools.PINLIST)
-    outhelper = Outputhelper(out, gpio)
+    #gpio = OPiTools.GPIOmgr(OPiTools.PINLIST)
+    #outhelper = Outputhelper(out, gpio)
+
+    print("starting check loop")
+    # test the output manager
+    # add some events
+    out.addeventlistener(ENTER_EVENT, lambda: print("enter"))
+    out.addeventlistener(TRIGGER_ENTER_EVENT, lambda: print("trigger enter"))
+    out.addeventlistener(TRIGGER_EXIT_EVENT, lambda: print("trigger exit"))
+    out.addeventlistener(EXIT_EVENT, lambda: print("exit"))
+
+    # start the check loop
+    thread = threading.Thread(target=out.check_loop)
+    thread.start()
+    # trigger the output manager
+
+    out.trigger()
+    time.sleep(5)
+    out.trigger()
+    while True:
+        time.sleep(1)
 
     exit(0)
     import time
