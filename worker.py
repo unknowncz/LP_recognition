@@ -62,10 +62,10 @@ class Worker:
                 text = []
                 if task.data is not None:
                     detections = self.detector(task.data)
-                    img = utils.crop_image(task.data, detections)
+                    img = utils.crop_image(task.data, detections, threshold=0.2)
                     if img is not None:
-                        imgmean = np.mean(img)
-                        _, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
+                        #imgmean = np.mean(img)
+                        #_, img = cv2.threshold(img, imgmean, 255, cv2.THRESH_BINARY)
                         #cv2.imshow("img", img)
                         #cv2.waitKey(1)
                         text = get_text(img)
