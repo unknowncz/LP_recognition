@@ -94,6 +94,7 @@ class Outputmgr:
         self.last_state_change = time.time()
 
     def main_idle(self):
+        self.next_state_change = 0
         for event in self.events:
             if event['type'] == EXIT_EVENT:
                 event['callback']()

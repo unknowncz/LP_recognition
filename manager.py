@@ -36,13 +36,13 @@ import output
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(5), successCallback=lambda *_:None):
+    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(2), successCallback=lambda *_:None):
         """Initialise the task distributor
 
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
             outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
-            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(5).
+            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(maxsize=2).
         """
         self.config = config
         self.logger = logger
