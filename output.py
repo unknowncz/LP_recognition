@@ -6,9 +6,10 @@ SELFDIR = os.path.abspath(f'{__file__}/..')
 
 from src.OPi import OPiTools
 
-TRIGGER_TIME = 120
-TRIGGER_ENTRY_DELAY = 15
-TRIGGER_EXIT_DELAY = 15
+# time in seconds
+TRIGGER_TIME = 3
+TRIGGER_ENTRY_DELAY = 2
+TRIGGER_EXIT_DELAY = 2
 
 ENTER_EVENT = 0
 TRIGGER_ENTER_EVENT = 1

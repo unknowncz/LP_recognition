@@ -220,6 +220,7 @@ if __name__ == "__main__":
     outhelper = output.Outputhelper(out, gpio)
     t = taskDistributor(logger, successCallback=out.trigger)
     outloopthread = threading.Thread(target=out.check_loop)
+    outloopthread.start()
     logger.info("Main process startup complete.")
     try:
         while True:
