@@ -35,9 +35,16 @@ class Outputmgr:
 
     def trigger(self):
         self.laststate = self.state
-        if self.laststate == 'exit':
-            self.next_state_change = time.time() + (time.time() - self.last_state_change)
         self.state = 'enter'
+        if self.laststate == 'enter':
+            pass
+        elif self.laststate == 'idle':
+            self.next_state_change = time.time() + TRIGGER_ENTRY_DELAY
+        elif self.laststate == 'trigger':
+            self.next_state_change = time.time() + TRIGGER_TIME
+            self.state = 'trigger'
+        elif self.laststate == 'exit':
+            self.next_state_change = time.time() + (time.time() - self.last_state_change)
         self.last_state_change = time.time()
 
     def check_loop(self):
