@@ -42,6 +42,7 @@ class Outputmgr:
     def check_loop(self):
         while not self.interrupt:
             if self.state != self.laststate:
+                print(f"State changed from {self.laststate} to {self.state}")
                 if self.state == 'enter':
                     self.main_enter()
                 elif self.state == 'trigger':
@@ -108,6 +109,13 @@ class Outputhelper:
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
         gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.mgr.trigger, OPiTools.RISING)
+        gpio.setMode(gpio.phys2wPi(self.RED), OPiTools.OUTPUT)
+        gpio.setMode(gpio.phys2wPi(self.YELLOW), OPiTools.OUTPUT)
+        gpio.setMode(gpio.phys2wPi(self.GREEN), OPiTools.OUTPUT)
+
+        gpio.digitalwrite(gpio.phys2wPi(self.RED), OPiTools.HIGH)
+        gpio.digitalwrite(gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
+        gpio.digitalwrite(gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
         self.mgr.addeventlistener(ENTER_EVENT, self.semaphore_enter)
         self.mgr.addeventlistener(TRIGGER_ENTER_EVENT, self.semaphore_trigger_enter)
@@ -119,8 +127,8 @@ class Outputhelper:
 
     def semaphore_enter(self):
         # detection of lp, start opening gate
-        # red high, yellow high, green low
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.HIGH)
+        # red low, yellow high, green low
+        self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
