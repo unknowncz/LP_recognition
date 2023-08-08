@@ -17,7 +17,7 @@ SELFDIR = os.path.abspath(f'{__file__}/..')
 class GUImgr:
     """GUI manager class for the main window
     """
-    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), mgr=None):
+    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), overridequeue=Queue()):
         """Initialize the class and the GUI
 
         Args:
@@ -29,7 +29,7 @@ class GUImgr:
         self.config = configparser.ConfigParser()
         self.config.read(f'{SELFDIR}/config.ini')
         self.DBmgr = db
-        self.mgr = mgr
+        self.overridequeue = overridequeue
 
         hw = QtWidgets.QWidget()
         hw.setLayout(QtWidgets.QVBoxLayout())
@@ -606,7 +606,7 @@ class GUImgr:
     def manualoverride(self):
         """Manually override the parent check for the next 10 seconds
         """
-        self.mgr.nextautopass = (time.time() + 10, True)
+        self.overridequeue.put(time.time())
 
 
 class Camera(QtWidgets.QWidget):
