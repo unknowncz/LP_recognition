@@ -11,7 +11,8 @@ if __name__ == "__main__":
 SELFDIR = os.path.abspath(f'{__file__}/..')
 
 # TODO:
-#  - add output callback to the taskDistributor class
+#  - fix manual override (broken due to pickeling of entire taskManager object not being possible anymore, at least on windows?)
+#  - above fixed?
 #  - update todo regularly
 
 logger = mp.get_logger()
@@ -29,7 +30,6 @@ import worker
 import camera
 import gui
 import dbmgr
-import output
 
 
 class taskDistributor:
@@ -48,12 +48,12 @@ class taskDistributor:
         self.loggerQueue = mp.Queue()
         self.outQ = outputQueue
         self.inQ = inputQueue
+        self.nextautopass = mp.Queue()
         self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
-        self.nextautopass = (time(), False)
         self.successCallback = successCallback
 
         self.guiQueue = mp.Queue()
-        self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr, self))
+        self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr, self.nextautopass))
         self.gui.start()
 
         self.logger.addHandler(QueueHandler(self.guiQueue))
@@ -96,27 +96,35 @@ class taskDistributor:
         Returns:
             Bool: Success
         """
+        success = False
         # check if the manual override is active, if so, the check passes automatically
-        if self.nextautopass[1] and time() < self.nextautopass[0]:
+        try:
+            nextpass = self.nextautopass.get_nowait()
+        except:
+            nextpass = 0
+        if time() < nextpass:
             self.logger.info(f"Manual override trigerred")
-            self.nextautopass = (time(), False)
-            return True
-        # check if the task is valid
-        if len(task.data) == 0: return
-
-        if len(task.data) >= 2:
-            joinedtask = utils.joinpredictions(task)
+            success = True
         else:
-            joinedtask = utils.Task(task.id, task.data[0])
-        if len(joinedtask.data[1]) != 2: return
-        # unpack the task data
-        bbox, (lp, conf) = joinedtask.data
-        # check if the LP is in the database
-        self.logger.info(f"Checking LP: {lp}")
-        if (valid := next((entry for entry in self.dbmgr if entry[0] in lp), None)) != None:
-        # if any([dbentry[0] in lp for dbentry in self.dbmgr]):
-        # if lp in self.dbmgr:
-        # if True:
+            # check if the task is valid
+            if len(task.data) == 0: return
+
+            if len(task.data) >= 2:
+                joinedtask = utils.joinpredictions(task)
+            else:
+                joinedtask = utils.Task(task.id, task.data[0])
+            if len(joinedtask.data[1]) != 2: return
+            # unpack the task data
+            bbox, (lp, conf) = joinedtask.data
+            # check if the LP is in the database
+            self.logger.info(f"Checking LP: {lp}")
+            if (valid := next((entry for entry in self.dbmgr if entry[0] in lp), None)) != None:
+            # if any([dbentry[0] in lp for dbentry in self.dbmgr]):
+            # if lp in self.dbmgr:
+            # if True:
+                success = True
+
+        if success:
             self.logger.info(f"Found valid LP: {valid[0]}; {valid[1]}")
             # send callback
             self.successCallback()
