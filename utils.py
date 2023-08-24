@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
-from PyQt5.QtWidgets import QTextEdit
+from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow
+import PyQt5.QtWidgets as QtWidgets
+import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 from tensorflow import keras, saved_model, convert_to_tensor, newaxis, lite
 from threading import Thread
@@ -138,13 +140,14 @@ class FeedManager:
         """
 
         # if the system is on linux, the camera feed will be unavailable (opencv-headless)
-        if 'linux' in sys.platform:
-            self.logger.warning('Camera feed unavailable on linux')
-            return
-
         self.cam = camcfg
         self.stop_feed = False
-        self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
+
+        # if the system is on linux, the camera feed will be unavailable (opencv-headless)
+        if 'linux' in sys.platform:
+            self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
+        else:
+            self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
         self.logger.info(f'Camera {camcfg["id"]} feed started')
         self.thread.start()
 
@@ -205,6 +208,61 @@ class FeedManager:
                     stream_ok = True
         cap.release()
         cv2.destroyAllWindows()
+        self.thread = None
+
+    def livefeed_thread_linux(self, camcfg:dict):
+        """Live feed thread function. Opens the live feed for the camera and displays it in a window. (Linux version)
+
+        Args:
+            camcfg (dict): camera configuration dictionary
+        """
+        # re-implement the livefeed_thread function for linux (use qt as opencv-headless is not available)
+        window = QMdiSubWindow()
+        window.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        window.setWindowTitle(f'Camera {camcfg["id"]} feed')
+        # when the window is closed, stop the feed
+        window.closeEvent = lambda event: self.stop()
+        window.show()
+        # refactor the livefeed_thread function to use qt
+        cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
+        stream_ok = True
+        frame_ok = True
+        while True:
+            try:
+                if not cap.isOpened():
+                    self.logger.warning(f'Camera {camcfg["id"]} feed stopped - failed to connect')
+                    break
+                ret, frame = cap.read()
+                if self.stop_feed:
+                    break
+                if ret:
+                    if not frame_ok:
+                        self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
+                    frame_ok = True
+                    window.setWidget(QtWidgets.QGraphicsView(QtGui.QPixmap.fromImage(QtGui.QImage(frame, frame.shape[1], frame.shape[0], QtGui.QImage.Format_BGR888))))
+                else:
+                    if frame_ok:
+                        self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
+                    frame_ok = False
+            except cv2.error:
+                self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
+                break
+            if stream_ok:
+                if not frame_ok:
+                # start of missing video
+                    stream_ok = False
+                    no_frame_start_time = time()
+            else:
+                if not frame_ok:
+                # still no video
+                    if time() - no_frame_start_time > 5:
+                        self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
+                        break
+                else:
+                # video restarted
+                    stream_ok = True
+        cap.release()
+        window.close()
         self.thread = None
 
 
