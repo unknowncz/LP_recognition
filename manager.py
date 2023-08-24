@@ -31,7 +31,6 @@ import worker
 import camera
 import gui
 import dbmgr
-import output
 
 
 class taskDistributor:
