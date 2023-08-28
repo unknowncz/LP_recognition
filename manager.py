@@ -5,7 +5,6 @@ import logging
 from logging.handlers import QueueHandler, QueueListener
 from time import time, sleep
 import os
-import threading
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
@@ -31,7 +30,7 @@ import worker
 import camera
 import gui
 import dbmgr
-
+import output
 
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
@@ -223,12 +222,9 @@ if __name__ == "__main__":
     config = ConfigParser()
     config.read(f"{SELFDIR}/config.ini")
     pins = [output.OPiTools.Pin(**pin) for pin in output.OPiTools.PINLIST]
-    out = output.Outputmgr()
     gpio = output.OPiTools.GPIOmgr(pins)
-    outhelper = output.Outputhelper(out, gpio)
-    t = taskDistributor(logger, successCallback=out.trigger)
-    outloopthread = threading.Thread(target=out.check_loop)
-    outloopthread.start()
+    outhelper = output.Outputhelper(gpio)
+    t = taskDistributor(logger, successCallback=outhelper.enter)
     logger.info("Main process startup complete.")
     try:
         while True:
@@ -238,6 +234,5 @@ if __name__ == "__main__":
                 sleep(0.05)
             t.distribute()
     except KeyboardInterrupt:
-        out.interrupt = True
         logger.info("Main process shutdown.")
         exit()

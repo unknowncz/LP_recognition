@@ -18,6 +18,7 @@ EXIT_EVENT = 3
 
 
 class Outputmgr:
+    # unused
     state_translate = {
         'idle': 'enter',
         'enter': 'trigger',
@@ -109,62 +110,64 @@ class Outputhelper:
     RED = 3
     YELLOW = 5
     GREEN = 7
+    GATE_PULSE = 8
 
-    INTERRUPT = 8
-    def __init__(self, mgr:Outputmgr, gpio:OPiTools.GPIOmgr) -> None:
+    INTERRUPT = 10
+    def __init__(self, gpio:OPiTools.GPIOmgr) -> None:
         self.gpio = gpio
-        self.mgr = mgr
+        self.allowed_trigger = True
 
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
-        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.mgr.trigger, OPiTools.RISING)
+        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.trigger_enter, OPiTools.RISING)
+        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.FALLING)
+
         gpio.setMode(gpio.phys2wPi(self.RED), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.YELLOW), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.GREEN), OPiTools.OUTPUT)
 
+        # set default state
         gpio.digitalwrite(gpio.phys2wPi(self.RED), OPiTools.HIGH)
         gpio.digitalwrite(gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         gpio.digitalwrite(gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-        self.mgr.addeventlistener(ENTER_EVENT, self.semaphore_enter)
-        self.mgr.addeventlistener(TRIGGER_ENTER_EVENT, self.semaphore_trigger_enter)
-        self.mgr.addeventlistener(TRIGGER_EXIT_EVENT, self.semaphore_trigger_exit)
-        self.mgr.addeventlistener(EXIT_EVENT, self.semaphore_exit)
-
-        thread = threading.Thread(target=self.check_loop_wrapper)
-        thread.start()
-
-    def semaphore_enter(self):
+    def enter(self):
+        if not self.allowed_trigger:
+            return
         # detection of lp, start opening gate
         # red low, yellow high, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+        self.gate_open()
 
-    def semaphore_trigger_enter(self):
+    def trigger_enter(self):
         # gate open, green high, yellow low, red low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.HIGH)
 
-    def semaphore_trigger_exit(self):
+    def trigger_exit(self):
         # gate closing, red low, yellow high, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-    def semaphore_exit(self):
+    def exit(self):
         # gate closed, red high, yellow low, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-    def check_loop_wrapper(self):
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.mgr.interrupt = True
+    def gate_open(self):
+        if self.allowed_trigger:
+            self.allowed_trigger = False
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.HIGH)
+            time.sleep(1)
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.LOW)
+
+    def gate_close(self):
+        self.allowed_trigger = True
 
 
 
