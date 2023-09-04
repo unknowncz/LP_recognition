@@ -120,7 +120,7 @@ class Outputhelper:
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
         gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.trigger_enter, OPiTools.RISING)
-        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.FALLING)
+        gpio.attachinterrupt(1, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.FALLING)
 
         gpio.setMode(gpio.phys2wPi(self.RED), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.YELLOW), OPiTools.OUTPUT)
