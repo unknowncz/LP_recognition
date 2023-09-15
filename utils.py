@@ -217,12 +217,14 @@ class FeedManager:
             camcfg (dict): camera configuration dictionary
         """
         # re-implement the livefeed_thread function for linux (use qt as opencv-headless is not available)
+        imgvwr = QtWidgets.QLabel()
         window = QMdiSubWindow()
         window.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         window.setWindowTitle(f'Camera {camcfg["id"]} feed')
         # when the window is closed, stop the feed
         window.closeEvent = lambda event: self.stop()
         window.show()
+        window.setWidget(imgvwr)
         # refactor the livefeed_thread function to use qt
         cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
         stream_ok = True
@@ -239,7 +241,7 @@ class FeedManager:
                     if not frame_ok:
                         self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
-                    window.setWidget(QtWidgets.QGraphicsView(QtGui.QPixmap.fromImage(QtGui.QImage(frame, frame.shape[1], frame.shape[0], QtGui.QImage.Format_BGR888))))
+                    imgvwr.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(frame, frame.shape[1], frame.shape[0], QtGui.QImage.Format_RGB888).rgbSwapped()))
                 else:
                     if frame_ok:
                         self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
