@@ -5,6 +5,8 @@ import logging
 from logging.handlers import QueueHandler, QueueListener
 from time import time, sleep
 import os
+import threading
+
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
@@ -217,6 +219,20 @@ class workerHandler:
     def __del__(self):
         self.kill()
 
+allowed = True
+
+def wrapperfunc(f):
+    global allowed
+    f()
+    allowed = True
+
+def helperfunc(f):
+    global allowed
+    if not allowed:
+        return
+    allowed = False
+    threading.Thread(target=wrapperfunc, args=(f,), daemon=True).start()
+
 
 if __name__ == "__main__":
     config = ConfigParser()
@@ -224,7 +240,7 @@ if __name__ == "__main__":
     pins = [output.OPiTools.Pin(**pin) for pin in output.OPiTools.PINLIST]
     gpio = output.OPiTools.GPIOmgr(pins)
     outhelper = output.Outputhelper(gpio)
-    t = taskDistributor(logger, successCallback=outhelper.enter)
+    t = taskDistributor(logger, successCallback=lambda:helperfunc(outhelper.enter))
     logger.info("Main process startup complete.")
     try:
         while True:

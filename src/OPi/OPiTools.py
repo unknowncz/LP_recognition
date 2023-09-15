@@ -1,5 +1,6 @@
 import subprocess
 import threading
+import time
 
 HIGH = 1
 LOW = 0
@@ -141,18 +142,21 @@ class GPIOmgr:
         if not self.isReadable(pin):
             raise ValueError(f'Cannot attach interrupt to pin {pin} as it is not readable')
 
-        last_value = self.pinmap_wPi[pin].read()
+        value = self.pinmap_wPi[pin].read()
         while self._stopinterrupt != id:
+            self.pinmap_wPi[pin].mode(self.pinmap_wPi[pin].pinmode)
+            last_value = value
+            time.sleep(0.01)
             # wait for an interrupt
             # if an interrupt is detected, call the callback function
             value = self.pinmap_wPi[pin].read()
             if value != last_value:
                 if edge == RISING and value == HIGH:
-                    callback(id)
+                    callback()
                 elif edge == FALLING and value == LOW:
-                    callback(id)
+                    callback()
                 elif edge == CHANGE:
-                    callback(id)
+                    callback()
         self._stopinterrupt = -1
 
     def get_num_interrupts(self):
@@ -163,3 +167,4 @@ class GPIOmgr:
             self._stopinterrupt = id
             self._interrupts[id].join()
             del self._interrupts[id]
+

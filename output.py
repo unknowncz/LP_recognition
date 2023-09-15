@@ -114,14 +114,16 @@ class Outputhelper:
 
     INTERRUPT = 10
     def __init__(self, gpio:OPiTools.GPIOmgr) -> None:
+
         self.gpio = gpio
         self.allowed_trigger = True
 
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
-        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.trigger_enter, OPiTools.RISING)
-        gpio.attachinterrupt(1, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.FALLING)
+        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.interrupt_enter, OPiTools.FALLING)
+        gpio.attachinterrupt(1, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.RISING)
 
+        gpio.setMode(gpio.phys2wPi(self.GATE_PULSE), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.RED), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.YELLOW), OPiTools.OUTPUT)
         gpio.setMode(gpio.phys2wPi(self.GREEN), OPiTools.OUTPUT)
@@ -131,44 +133,54 @@ class Outputhelper:
         gpio.digitalwrite(gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         gpio.digitalwrite(gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-    def enter(self):
-        if not self.allowed_trigger:
-            return
-        # detection of lp, start opening gate
-        # red low, yellow high, green low
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
-        self.gate_open()
+
+
+
+    def enter(self, overridetrigger=True):
+        if self.allowed_trigger and overridetrigger:
+            # detection of lp, start opening gate
+            # red low, yellow high, green low
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+            self.gate_open()
+        time.sleep(10)
+        self.trigger_enter()
+
+    def interrupt_enter(self):
+        self.enter(False)
 
     def trigger_enter(self):
         # gate open, green high, yellow low, red low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.HIGH)
+        time.sleep(10)
+        self.trigger_exit()
 
     def trigger_exit(self):
         # gate closing, red low, yellow high, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+        time.sleep(10)
+        self.exit()
 
     def exit(self):
         # gate closed, red high, yellow low, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+        self.gate_close()
 
     def gate_open(self):
-        if self.allowed_trigger:
-            self.allowed_trigger = False
-            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.HIGH)
-            time.sleep(1)
-            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.LOW)
+        self.allowed_trigger = False
+        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.HIGH)
+        time.sleep(1)
+        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.LOW)
 
     def gate_close(self):
         self.allowed_trigger = True
-
 
 
 if __name__ == '__main__':
