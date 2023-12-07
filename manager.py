@@ -37,19 +37,27 @@ import output
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=mp.Queue(2), successCallback=lambda *_:None):
+    def __init__(self, logger=logging.getLogger(), outputQueue=mp.Queue(), inputQueue=None, successCallback=lambda *_:None):
         """Initialise the task distributor
 
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
             outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
-            inputQueue (mp.Queue, optional): Will contain the camera input tasks. Always limit the size when changing from default. Defaults to mp.Queue(maxsize=2).
+            inputQueue (Namespace): Will contain the camera input tasks as attributes in the following format "cam_id{camera_id}".
         """
         self.config = config
         self.logger = logger
         self.loggerQueue = mp.Queue()
+        if inputQueue is None:
+            self.mpmanager = mp.Manager()
+            self.inQ = self.mpmanager.Namespace()
+        else:
+            self.inQ = inputQueue
+        self.inQ_nextidx = 0
+        for i in range(int(config['GENERAL']['NUM_CAMERAS'])):
+            self.inQ.__setattr__(f"cam_id{i}", [])
+
         self.outQ = outputQueue
-        self.inQ = inputQueue
         self.nextautopass = mp.Queue()
         self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
         self.successCallback = successCallback
@@ -69,9 +77,7 @@ class taskDistributor:
             model_type = config['GENERAL']['MODEL_TYPE']
 
         # start the worker and camera processes
-
         self.workers = [workerHandler(i, outputQueue=self.outQ, loggerQueue=self.loggerQueue, model_type=model_type) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
-
         self.cameras = [CameraHandler(i, self.inQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_CAMERAS']))]
 
         self.logger.info(f"Created {len(self.workers)} worker(s) with {len(self.cameras)} camera(s) as inputs")
@@ -84,10 +90,16 @@ class taskDistributor:
             self.logger.info("GUI closed, exiting")
             self.kill()
             exit(0)
+        frame = getattr(self.inQ, f"cam_id{self.inQ_nextidx}")
+        if frame == []:
+            sleep(0.01)
+            return
         for worker in self.workers:
             worker.update()
-            if not worker.busy and self.inQ.qsize():
-                worker.assignTask(self.inQ.get())
+            if not worker.busy:
+                worker.assignTask(frame)
+                self.inQ.__setattr__(f"cam_id{self.inQ_nextidx}", [])
+                self.inQ_nextidx = (self.inQ_nextidx + 1) % int(config['GENERAL']['NUM_CAMERAS'])
 
     def check(self, task:utils.Task):
         """Will check if the task is valid and should be processed
@@ -147,7 +159,7 @@ class taskDistributor:
 class CameraHandler:
     """Wrapper class for the camera process for easier management
     """
-    def __init__(self, id=-1, inputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue()):
+    def __init__(self, id=-1, inputQueue=mp.Queue(), loggerQueue=mp.Queue()):
         """Initialise the camera handler and start the camera process
 
         Args:
