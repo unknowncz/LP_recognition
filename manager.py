@@ -48,6 +48,7 @@ class taskDistributor:
         self.config = config
         self.logger = logger
         self.loggerQueue = mp.Queue()
+
         if inputQueue is None:
             self.mpmanager = mp.Manager()
             self.inQ = self.mpmanager.Namespace()
@@ -57,7 +58,17 @@ class taskDistributor:
         for i in range(int(config['GENERAL']['NUM_CAMERAS'])):
             self.inQ.__setattr__(f"cam_id{i}", [])
 
-        self.outQ = outputQueue
+        if outputQueue is None:
+            if inputQueue is None:
+                self.outQ = self.inQ
+            else:
+                self.outQ = self.mpmanager.Namespace()
+        else:
+            self.outQ = outputQueue
+
+        for i in range(int(config['GENERAL']['NUM_WORKERS'])):
+            self.outQ.__setattr__(f"wkr_id{i}", None)
+
         self.nextautopass = mp.Queue()
         self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
         self.successCallback = successCallback
@@ -77,7 +88,7 @@ class taskDistributor:
             model_type = config['GENERAL']['MODEL_TYPE']
 
         # start the worker and camera processes
-        self.workers = [workerHandler(i, outputQueue=self.outQ, loggerQueue=self.loggerQueue, model_type=model_type) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
+        self.workers = [workerHandler(i, output=self.outQ, loggerQueue=self.loggerQueue, model_type=model_type) for i in range(int(config['GENERAL']['NUM_WORKERS']))]
         self.cameras = [CameraHandler(i, self.inQ, loggerQueue=self.loggerQueue) for i in range(int(config['GENERAL']['NUM_CAMERAS']))]
 
         self.logger.info(f"Created {len(self.workers)} worker(s) with {len(self.cameras)} camera(s) as inputs")
@@ -180,7 +191,7 @@ class CameraHandler:
 class workerHandler:
     """Wrapper class for the worker process for easier management
     """
-    def __init__(self, id=-1, callback=lambda *_:None, outputQueue:mp.Queue=mp.Queue(), loggerQueue=mp.Queue(), model_type='tf'):
+    def __init__(self, id:int, output, callback=lambda *_:None, loggerQueue=mp.Queue(), model_type='tf'):
         """Initialise the worker handler and start the worker process
 
         Args:
@@ -199,7 +210,7 @@ class workerHandler:
         self._id = id
         self.busy = False
         self.callback = callback
-        self.outputQueue = outputQueue
+        self.output = output
 
     def assignTask(self, task:utils.Task):
         """Assign a task to the worker process
@@ -217,10 +228,10 @@ class workerHandler:
         """
         # check if the worker has finished a task, if so, mark it as not busy and put the task in the output queue
         if self._Qrecv.qsize() == 0: return
-        taskdone = self._Qrecv.get()
-        self.logger.debug(f"Worker {self._id} finished task {taskdone}")
         self.busy = False
-        self.outputQueue.put(taskdone)
+        taskdone = self._Qrecv.get()
+        self.output.__setattr__(f"wkr_id{self._id}", taskdone)
+        self.logger.debug(f"Worker {self._id} finished task {taskdone.id}")
         self.callback()
 
     def kill(self):
@@ -254,12 +265,15 @@ if __name__ == "__main__":
     outhelper = output.Outputhelper(gpio)
     t = taskDistributor(logger, successCallback=lambda:helperfunc(outhelper.enter))
     logger.info("Main process startup complete.")
+    nextcheck = 0
     try:
         while True:
-            if not t.outQ.empty():
-                t.check(t.outQ.get(block=True))
+            f = t.outQ.__getattr__(f"wkr_id{nextcheck}")
+            if not f is None:
+                t.check(f)
             else:
                 sleep(0.05)
+            nextcheck = (nextcheck + 1) % int(config['GENERAL']['NUM_WORKERS'])
             t.distribute()
     except KeyboardInterrupt:
         logger.info("Main process shutdown.")
