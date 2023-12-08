@@ -6,9 +6,10 @@ SELFDIR = os.path.abspath(f'{__file__}/..')
 
 from src.OPi import OPiTools
 
-TRIGGER_TIME = 120
-TRIGGER_ENTRY_DELAY = 15
-TRIGGER_EXIT_DELAY = 15
+# time in seconds
+TRIGGER_TIME = 3
+TRIGGER_ENTRY_DELAY = 2
+TRIGGER_EXIT_DELAY = 2
 
 ENTER_EVENT = 0
 TRIGGER_ENTER_EVENT = 1
@@ -17,6 +18,7 @@ EXIT_EVENT = 3
 
 
 class Outputmgr:
+    # unused
     state_translate = {
         'idle': 'enter',
         'enter': 'trigger',
@@ -34,14 +36,22 @@ class Outputmgr:
 
     def trigger(self):
         self.laststate = self.state
-        if self.laststate == 'exit':
-            self.next_state_change = time.time() + (time.time() - self.last_state_change)
         self.state = 'enter'
+        if self.laststate == 'enter':
+            pass
+        elif self.laststate == 'idle':
+            self.next_state_change = time.time() + TRIGGER_ENTRY_DELAY
+        elif self.laststate == 'trigger':
+            self.next_state_change = time.time() + TRIGGER_TIME
+            self.state = 'trigger'
+        elif self.laststate == 'exit':
+            self.next_state_change = time.time() + (time.time() - self.last_state_change)
         self.last_state_change = time.time()
 
     def check_loop(self):
         while not self.interrupt:
             if self.state != self.laststate:
+                print(f"State changed from {self.laststate} to {self.state}")
                 if self.state == 'enter':
                     self.main_enter()
                 elif self.state == 'trigger':
@@ -60,10 +70,10 @@ class Outputmgr:
             for event in self.events:
                 if event['type'] == ENTER_EVENT:
                     event['callback']()
-        elif self.laststate == 'exit':
+        elif self.laststate == 'exit' or self.laststate == 'enter':
             self.next_state_change = time.time() + (time.time() - self.last_state_change)
             for event in self.events:
-                if event['type'] == TRIGGER_ENTER_EVENT:
+                if event['type'] == ENTER_EVENT:
                     event['callback']()
         self.laststate = self.state
         self.last_state_change = time.time()
@@ -85,6 +95,7 @@ class Outputmgr:
         self.last_state_change = time.time()
 
     def main_idle(self):
+        self.next_state_change = 0
         for event in self.events:
             if event['type'] == EXIT_EVENT:
                 event['callback']()
@@ -99,63 +110,104 @@ class Outputhelper:
     RED = 3
     YELLOW = 5
     GREEN = 7
+    GATE_PULSE = 8
 
-    INTERRUPT = 8
-    def __init__(self, mgr:Outputmgr, gpio:OPiTools.GPIOmgr) -> None:
+    INTERRUPT = 10
+    def __init__(self, gpio:OPiTools.GPIOmgr) -> None:
+
         self.gpio = gpio
-        self.mgr = mgr
+        self.allowed_trigger = True
 
         # setup gpio
         gpio.setMode(gpio.phys2wPi(self.INTERRUPT), OPiTools.INPUT_PULLUP)
-        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.mgr.trigger, OPiTools.RISING)
+        gpio.attachinterrupt(0, gpio.phys2wPi(self.INTERRUPT), self.interrupt_enter, OPiTools.FALLING)
+        gpio.attachinterrupt(1, gpio.phys2wPi(self.INTERRUPT), self.exit, OPiTools.RISING)
 
-        self.mgr.addeventlistener(ENTER_EVENT, self.semaphore_enter)
-        self.mgr.addeventlistener(TRIGGER_ENTER_EVENT, self.semaphore_trigger_enter)
-        self.mgr.addeventlistener(TRIGGER_EXIT_EVENT, self.semaphore_trigger_exit)
-        self.mgr.addeventlistener(EXIT_EVENT, self.semaphore_exit)
+        gpio.setMode(gpio.phys2wPi(self.GATE_PULSE), OPiTools.OUTPUT)
+        gpio.setMode(gpio.phys2wPi(self.RED), OPiTools.OUTPUT)
+        gpio.setMode(gpio.phys2wPi(self.YELLOW), OPiTools.OUTPUT)
+        gpio.setMode(gpio.phys2wPi(self.GREEN), OPiTools.OUTPUT)
 
-        thread = threading.Thread(target=self.check_loop_wrapper)
-        thread.start()
+        # set default state
+        gpio.digitalwrite(gpio.phys2wPi(self.RED), OPiTools.HIGH)
+        gpio.digitalwrite(gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
+        gpio.digitalwrite(gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-    def semaphore_enter(self):
-        # detection of lp, start opening gate
-        # red high, yellow high, green low
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.HIGH)
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
-        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-    def semaphore_trigger_enter(self):
+
+
+    def enter(self, overridetrigger=True):
+        if self.allowed_trigger and overridetrigger:
+            # detection of lp, start opening gate
+            # red low, yellow high, green low
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
+            self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+            self.gate_open()
+        time.sleep(10)
+        self.trigger_enter()
+
+    def interrupt_enter(self):
+        self.enter(False)
+
+    def trigger_enter(self):
         # gate open, green high, yellow low, red low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.HIGH)
+        time.sleep(10)
+        self.trigger_exit()
 
-    def semaphore_trigger_exit(self):
+    def trigger_exit(self):
         # gate closing, red low, yellow high, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+        time.sleep(10)
+        self.exit()
 
-    def semaphore_exit(self):
+    def exit(self):
         # gate closed, red high, yellow low, green low
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.RED), OPiTools.HIGH)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         self.gpio.digitalwrite(self.gpio.phys2wPi(self.GREEN), OPiTools.LOW)
+        self.gate_close()
 
-    def check_loop_wrapper(self):
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.mgr.interrupt = True
+    def gate_open(self):
+        self.allowed_trigger = False
+        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.HIGH)
+        time.sleep(1)
+        self.gpio.digitalwrite(self.gpio.phys2wPi(self.GATE_PULSE), OPiTools.LOW)
 
+    def gate_close(self):
+        self.allowed_trigger = True
 
 
 if __name__ == '__main__':
+    import multiprocessing as mp
 
     out = Outputmgr()
-    gpio = OPiTools.GPIOmgr(OPiTools.PINLIST)
-    outhelper = Outputhelper(out, gpio)
+    #gpio = OPiTools.GPIOmgr(OPiTools.PINLIST)
+    #outhelper = Outputhelper(out, gpio)
+
+    print("starting check loop")
+    # test the output manager
+    # add some events
+    out.addeventlistener(ENTER_EVENT, lambda: print("enter"))
+    out.addeventlistener(TRIGGER_ENTER_EVENT, lambda: print("trigger enter"))
+    out.addeventlistener(TRIGGER_EXIT_EVENT, lambda: print("trigger exit"))
+    out.addeventlistener(EXIT_EVENT, lambda: print("exit"))
+
+    # start the check loop
+    thread = threading.Thread(target=out.check_loop)
+    thread.start()
+    # trigger the output manager
+
+    out.trigger()
+    time.sleep(5)
+    out.trigger()
+    while True:
+        time.sleep(1)
 
     exit(0)
     import time

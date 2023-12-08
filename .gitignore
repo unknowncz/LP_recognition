@@ -1,2 +1,4 @@
 
 output/model_final.pth
+log
+__pycache__

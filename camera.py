@@ -1,4 +1,4 @@
-from multiprocessing import Queue, queues
+from multiprocessing import Queue, queues, Manager
 import cv2
 import logging
 from logging.handlers import QueueHandler
@@ -13,12 +13,12 @@ RETRY_INTERVAL = 60
 class Camera:
     """A class to represent a camera and its connection to the system.
     """
-    def __init__(self, cfg:dict, output=Queue(), loggerQueue=Queue(), autoconnect=False):
+    def __init__(self, cfg:dict, output, loggerQueue=Queue(), autoconnect=False):
         """Initialize the class. If autoconnect is set to True, the camera will connect automatically.
 
         Args:
             cfg (dict): Camara config as a dictionary.
-            output (Queue, optional): Queue for the camera frames. Defaults to multiprocessing.Queue().
+            output (Namespace): Multiprocessing namespace, Stores the current frame in the 'cam_id{camera_id}' variable.
             loggerQueue (Queue, optional): Queue for logging connections. Defaults to multiprocessing.Queue().
             autoconnect (bool, optional): Automatically connect to the camera. Defaults to False.
         """
@@ -76,13 +76,13 @@ class Camera:
                 elif ret2:
                     self.logger.info('Camera is back online')
                     ret2 = False
-                try:
-                    self._output.put_nowait(utils.Task(self.cfg['id'], frame))
-                except queues.Full:
-                    pass
+
+                setattr(self._output, f"cam_id{self.cfg['id']}", frame)
+
             except Exception as e:
                 self.logger.error(f"Failed to read from camera {self.cfg['id']}")
                 self.logger.error(traceback.format_exc())
+                setattr(self._output, f"id{self.cfg['id']}", [])
                 if type(e) == KeyboardInterrupt:
                     break
 
