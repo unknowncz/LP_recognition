@@ -36,6 +36,7 @@ import dbmgr
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
+    def __init__(self, logger=logging.getLogger(), outputQueue=None, inputQueue=None, successCallback=lambda *_:None):
         """Initialise the task distributor
 
         Args:
