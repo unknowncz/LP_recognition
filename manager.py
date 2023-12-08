@@ -42,7 +42,7 @@ class taskDistributor:
 
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
-            outputQueue (mp.Queue, optional): dWill contain the worker output tasks. Defaults to mp.Queue().
+            outputQueue (mp.Queue, optional): Will contain the worker output tasks. Defaults to mp.Queue().
             inputQueue (Namespace): Will contain the camera input tasks as attributes in the following format "cam_id{camera_id}".
         """
         self.config = config
