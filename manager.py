@@ -170,18 +170,18 @@ class taskDistributor:
 class CameraHandler:
     """Wrapper class for the camera process for easier management
     """
-    def __init__(self, id=-1, inputQueue=mp.Queue(), loggerQueue=mp.Queue()):
+    def __init__(self, id:int, inputQ, loggerQueue=mp.Queue()):
         """Initialise the camera handler and start the camera process
 
         Args:
-            id (int, optional): Camera process ID. Defaults to -1.
-            inputQueue (mp.Queue, optional): Collected frames will be put here in the utils.task form. Defaults to mp.Queue().
+            id (int): Camera process ID. Defaults to -1.
+            inputQ (Namespace, optional): Collected frames will be put here in the utils.task form.
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
         """
         # start the camera process
         cfg = {"protocol":"rtsp", "port":554, "login":"admin", "password":"admin", "ip":"127.0.0.1", "id":id}
         cfg |= {k:v for k,v in config[f'CAM_{id}'].items()}
-        self._process = mp.Process(target=camera.Camera, args=(cfg, inputQueue, loggerQueue, True), name=f"Camera_{id}_process")
+        self._process = mp.Process(target=camera.Camera, args=(cfg, inputQ, loggerQueue, True), name=f"Camera_{id}_process")
         self._process.start()
         self.cfg = cfg
 
@@ -197,7 +197,7 @@ class workerHandler:
         Args:
             id (int, optional): Worker ID. Defaults to -1.
             callback (function, optional): Callback on successful return from task. Defaults to lambda*_:None.
-            outputQueue (mp.Queue, optional): Queue for outputting finished tasks. Defaults to mp.Queue().
+            output (Namespace, optional): Namespace for outputting finished tasks.
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
             model_type (str, optional): Model type to use. Defaults to 'tf'.
         """
