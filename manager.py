@@ -37,11 +37,11 @@ class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
     def __init__(self, logger=logging.getLogger(), outputQueue=None, inputQueue=None, successCallback=lambda *_:None):
-        """Initialise the task distributor
+        """Initialize the task distributor
 
         Args:
-            logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger(__name__).
-            outputQueue (Namespace, optional): Will contain the worker output tasks. Creates Namespace if one is not provided.
+            logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger().
+            outputQueue (Namespace, optional): Will contain the worker output tasks as attributes in the following format "wrk_id{camera_id}". Creates Namespace if one is not provided.
             inputQueue (Namespace, optional): Will contain the camera input tasks as attributes in the following format "cam_id{camera_id}". Creates Namespace if one is not provided.
         """
         self.config = config
@@ -170,7 +170,7 @@ class CameraHandler:
     """Wrapper class for the camera process for easier management
     """
     def __init__(self, id:int, inputQ, loggerQueue=mp.Queue()):
-        """Initialise the camera handler and start the camera process
+        """Initialize the camera handler and start the camera process
 
         Args:
             id (int): Camera process ID. Defaults to -1.
@@ -191,12 +191,12 @@ class workerHandler:
     """Wrapper class for the worker process for easier management
     """
     def __init__(self, id:int, output, callback=lambda *_:None, loggerQueue=mp.Queue(), model_type='tf'):
-        """Initialise the worker handler and start the worker process
+        """Initialize the worker handler and start the worker process
 
         Args:
             id (int, optional): Worker ID. Defaults to -1.
+            output (Namespace): Namespace for outputting finished tasks.
             callback (function, optional): Callback on successful return from task. Defaults to lambda*_:None.
-            output (Namespace, optional): Namespace for outputting finished tasks.
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
             model_type (str, optional): Model type to use. Defaults to 'tf'.
         """
@@ -215,7 +215,7 @@ class workerHandler:
         """Assign a task to the worker process
 
         Args:
-            task (utils.Task): Task to assign in format (bbox, (lp, conf))
+            task (utils.Task): Task to assign to the worker.
         """
         # assign a task to the worker process and mark it as busy
         self.logger.debug(f"Assigning task {task} to worker {self._id}")
@@ -251,6 +251,7 @@ if __name__ == "__main__":
     try:
         while True:
             f = t.outQ.__getattr__(f"wkr_id{nextcheck}")
+            t.outQ.__setattr__(f"wkr_id{nextcheck}", None)
             if not f is None:
                 t.check(f)
             else:

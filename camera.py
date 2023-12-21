@@ -77,7 +77,7 @@ class Camera:
                     self.logger.info('Camera is back online')
                     ret2 = False
 
-                setattr(self._output, f"cam_id{self.cfg['id']}", frame)
+                setattr(self._output, f"cam_id{self.cfg['id']}", utils.Task(self.cfg['id'], frame))
 
             except Exception as e:
                 self.logger.error(f"Failed to read from camera {self.cfg['id']}")
