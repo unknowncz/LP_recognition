@@ -127,7 +127,6 @@ class FeedManager:
         Args:
             logger (logging.Logger, optional): Logger. Defaults to logging.getLogger().
         """
-        self.cams = {}
         self.thread = None
         self.logger = logger
         self.stop_feed = False
@@ -138,12 +137,8 @@ class FeedManager:
         Args:
             camcfg (dict): Camera configuration dictionary
         """
-
-        # if the system is on linux, the camera feed will be unavailable (opencv-headless)
         self.cam = camcfg
         self.stop_feed = False
-
-        # if the system is on linux, the camera feed will be unavailable (opencv-headless)
         if 'linux' in sys.platform:
             self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
         else:

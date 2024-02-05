@@ -133,9 +133,6 @@ class Outputhelper:
         gpio.digitalwrite(gpio.phys2wPi(self.YELLOW), OPiTools.LOW)
         gpio.digitalwrite(gpio.phys2wPi(self.GREEN), OPiTools.LOW)
 
-
-
-
     def enter(self, overridetrigger=True):
         if self.allowed_trigger and overridetrigger:
             # detection of lp, start opening gate

@@ -4,7 +4,7 @@ import logging
 class DatabaseHandler:
     """Helper class to work with data.
     """
-    def __init__(self, path:str, logger=logging.getLogger(__name__)):
+    def __init__(self, path:str, logger=logging.getLogger(__name__), overridedb:dict=None):
         """Initialize the class and load the data.
 
         Args:
@@ -15,15 +15,15 @@ class DatabaseHandler:
         self.path = path
         with open(path, "r", encoding='UTF-8') as f:
             reader = csv.reader(f)
-            self.database = {}
+            self.database = overridedb or {}
             for row in reader:
                 try:
-                    self.database |= {row[0].strip().upper():row[1].strip()}
+                    self.database.update({row[0].strip().upper():row[1].strip()})
                 except IndexError:
                     if len(row) == 0:
                         continue
                     logger.warning(f"Database entry {repr(row[0])} has an empty value")
-                    self.database |= {row[0].strip().upper():''}
+                    self.database.update({row[0].strip().upper():''})
         self.logger.info(f"Database loaded from {path}")
 
     def save(self):
