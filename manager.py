@@ -48,8 +48,8 @@ class taskDistributor:
         self.logger = logger
         self.loggerQueue = mp.Queue()
 
+        self.mpmanager = mp.Manager()
         if inputQueue is None:
-            self.mpmanager = mp.Manager()
             self.inQ = self.mpmanager.Namespace()
         else:
             self.inQ = inputQueue
@@ -69,7 +69,7 @@ class taskDistributor:
             self.outQ.__setattr__(f"wkr_id{i}", None)
 
         self.nextautopass = mp.Queue()
-        self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger)
+        self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger, overridedb=self.mpmanager.dict())
         self.successCallback = successCallback
 
         self.guiQueue = mp.Queue()

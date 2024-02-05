@@ -111,6 +111,8 @@ Initializes the database class and loads the data.
 
 ```logger``` (optional) Logger for database info and error logging.
 
+```overridedb``` (optional) A ```dict```-like object for storing data (eg. ```multiprocessing.Manager().dict()```)
+
 Returns: ```None```
 
 ##### Usage #####
