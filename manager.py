@@ -41,7 +41,7 @@ class taskDistributor:
 
         Args:
             logger (logging.Logger, optional): Logger to use. Defaults to logging.getLogger().
-            outputQueue (Namespace, optional): Will contain the worker output tasks as attributes in the following format "wrk_id{camera_id}". Creates Namespace if one is not provided.
+            outputQueue (Namespace, optional): Will contain the worker output tasks as attributes in the following format "wkr_id{camera_id}". Creates Namespace if one is not provided.
             inputQueue (Namespace, optional): Will contain the camera input tasks as attributes in the following format "cam_id{camera_id}". Creates Namespace if one is not provided.
         """
         self.config = config
