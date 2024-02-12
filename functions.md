@@ -70,7 +70,7 @@ Returns: ```None```
 
 #### __run__ ####
 
-Starts the frame-grabbing loop. Use ```process.kill``` or equivalent to exit the loop.
+Starts the frame-grabbing loop. Use ```process.kill``` or equivalent to exit the loop. If the ```crop``` config variable is set, crop the image to [x, y, width, height] of the image
 
 ```NoReturn``` function.
 
@@ -1140,9 +1140,11 @@ Returns: ```None```
 
 #### __start__ ####
 
-Start the camera live feed in a separate thread. Different behaviour for windows / linux.
+Start the camera live feed in a separate thread.
 
 ```camcfg``` A dict containing the configuration of the camera.
+
+```crop``` (optional) Enable user cropping of the camera-grabbed frame
 
 Returns: ```None```
 
@@ -1170,27 +1172,6 @@ Returns: ```None```
 
 #### __livefeed\_thread__ ####
 
-Opens a connection to the camera and show the feed using ```cv2.imshow```.
-
-Returns: ```None```
-
-> Note: This is a No-Return function, call as a thread target.
-
-##### Usage #####
-
-    ...
-    self.cam = camcfg
-    self.stop_feed = False
-    if 'linux' in sys.platform:
-        self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
-    else:
-        self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
-    self.logger.info(f'Camera {camcfg["id"]} feed started')
-    self.thread.start()
-    ...
-
-#### __livefeed\_thread\_linux__ ####
-
 Opens a connection to the camera and show the feed using a ```QWidget```.
 
 Returns: ```None```
@@ -1202,10 +1183,7 @@ Returns: ```None```
     ...
     self.cam = camcfg
     self.stop_feed = False
-    if 'linux' in sys.platform:
-        self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
-    else:
-        self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
+    self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
     self.logger.info(f'Camera {camcfg["id"]} feed started')
     self.thread.start()
     ...

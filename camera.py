@@ -77,6 +77,10 @@ class Camera:
                     self.logger.info('Camera is back online')
                     ret2 = False
 
+                if self.cfg.get('crop', False):
+                    x, y, w, h = self.cfg['crop']
+                    frame = frame[y:y+h, x:x+w]
+
                 setattr(self._output, f"cam_id{self.cfg['id']}", utils.Task(self.cfg['id'], frame))
 
             except Exception as e:
