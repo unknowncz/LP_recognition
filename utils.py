@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
-from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow
-import PyQt5.QtWidgets as QtWidgets
+from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow, QLabel
 import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 from tensorflow import keras, saved_model, convert_to_tensor, newaxis, lite
@@ -131,18 +130,20 @@ class FeedManager:
         self.logger = logger
         self.stop_feed = False
 
-    def start(self, camcfg:dict):
+    def start(self, camcfg:dict, crop=False):
         """Starts the live feed for the camera
 
         Args:
             camcfg (dict): Camera configuration dictionary
+            crop (bool): Enable camera image cropping feature
         """
+        # stop the feed if it is already running this would cause issues if the thread is not stopped before starting a new one
+        if self.thread:
+            self.stop()
+
         self.cam = camcfg
         self.stop_feed = False
-        if 'linux' in sys.platform:
-            self.thread = Thread(target=self.livefeed_thread_linux, args=(camcfg,), daemon=True)
-        else:
-            self.thread = Thread(target=self.livefeed_thread, args=(camcfg,), daemon=True)
+        self.thread = Thread(target=self.livefeed_thread, args=(camcfg,crop), daemon=True)
         self.logger.info(f'Camera {camcfg["id"]} feed started')
         self.thread.start()
 
@@ -153,66 +154,24 @@ class FeedManager:
         self.stop_feed = True
         self.logger.info('Camera feed stopped')
 
-    def livefeed_thread(self, camcfg:dict):
+    def livefeed_thread(self, camcfg:dict, crop=False):
         """Live feed thread function. Opens the live feed for the camera and displays it in a window.
 
         Args:
             camcfg (dict): Camera configuration dictionary
+            crop (bool): Enable camera image cropping feature
         """
+        # re-implement the livefeed_thread function for linux (use qt as opencv-headless is not available)
         cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
         stream_ok = True
         frame_ok = True
-        while True:
-            try:
-                if not cap.isOpened():
-                    self.logger.warning(f'Camera {camcfg["id"]} feed stopped - failed to connect')
-                    break
-                ret, frame = cap.read()
-                if self.stop_feed:
-                    cv2.destroyAllWindows()
-                    break
-                if ret:
-                    if not frame_ok:
-                        self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
-                    frame_ok = True
-                    cv2.imshow(f'Camera {camcfg["id"]} feed', frame)
-                    key = cv2.waitKey(1)
-                    # stop the feed if the escape key is pressed
-                    if key == 27:
-                        self.stop()
-                else:
-                    if frame_ok:
-                        self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
-                    frame_ok = False
-            except cv2.error:
-                self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
-                break
-            if stream_ok:
-                if not frame_ok:
-                # start of missing video
-                    stream_ok = False
-                    no_frame_start_time = time()
-            else:
-                if not frame_ok:
-                # still no video
-                    if time() - no_frame_start_time > 5:
-                        self.logger.warning(f'Camera {camcfg["id"]} feed timed out - not connected')
-                        break
-                else:
-                # video restarted
-                    stream_ok = True
-        cap.release()
-        cv2.destroyAllWindows()
-        self.thread = None
+        frameshape = cap.read().shape
 
-    def livefeed_thread_linux(self, camcfg:dict):
-        """Live feed thread function. Opens the live feed for the camera and displays it in a window. (Linux version)
-
-        Args:
-            camcfg (dict): camera configuration dictionary
-        """
-        # re-implement the livefeed_thread function for linux (use qt as opencv-headless is not available)
-        imgvwr = QtWidgets.QLabel()
+        if crop:
+            temp = camcfg.get("crop", [0, 0, frameshape[1], frameshape[0]])
+            self.crop = [temp[0] or 0, temp[1] or 0, temp[2] or frameshape[1], temp[3] or frameshape[0]]
+            self.tempcrop = []
+        imgvwr = QLabel()
         window = QMdiSubWindow()
         window.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         window.setWindowTitle(f'Camera {camcfg["id"]} feed')
@@ -220,11 +179,42 @@ class FeedManager:
         window.closeEvent = lambda event: self.stop()
         window.show()
         window.setWidget(imgvwr)
-        # refactor the livefeed_thread function to use qt
-        cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
-        stream_ok = True
-        frame_ok = True
-        while True:
+        # if the crop option is set, crop the image on drag
+        if crop:
+            # on right click reset the crop to the entire image
+            # on drag, crop the image to a rectangle between the two points
+            # store the start point of the crop
+            def mousePressEvent(event):
+                if event.button() == Qt.LeftButton:
+                    self.crop_start = event.pos()
+                elif event.button() == Qt.RightButton:
+                    del self.crop_start
+                    self.crop = [0, 0, frameshape[1], frameshape[0]]
+            # store the end point of the crop and crop the image
+            def mouseReleaseEvent(event):
+                if not self.crop_start:
+                    return
+                self.crop_end = event.pos()
+                x1, y1 = self.crop_start.x(), self.crop_start.y()
+                x2, y2 = self.crop_end.x(), self.crop_end.y()
+                x, y = min(x1, x2), min(y1, y2)
+                w, h = abs(x1 - x2), abs(y1 - y2)
+                self.crop = [x, y, w, h]
+            # add a mouse move event to the image viewer - draw a rectangle from the start point to the current point
+            def mouseMoveEvent(event):
+                if hasattr(self, 'crop_start'):
+                    x1, y1 = self.crop_start.x(), self.crop_start.y()
+                    x2, y2 = event.pos().x(), event.pos().y()
+                    x, y = min(x1, x2), min(y1, y2)
+                    w, h = abs(x1 - x2), abs(y1 - y2)
+                    self.tempcrop = [x, y, w, h]
+
+            # add a mouse press and release event to the image viewer
+            imgvwr.mousePressEvent = mousePressEvent
+            imgvwr.mouseReleaseEvent = mouseReleaseEvent
+            imgvwr.mouseMoveEvent = mouseMoveEvent
+
+        while not self.stop_feed:
             try:
                 if not cap.isOpened():
                     self.logger.warning(f'Camera {camcfg["id"]} feed stopped - failed to connect')
@@ -236,10 +226,16 @@ class FeedManager:
                     if not frame_ok:
                         self.logger.info(f'Camera {camcfg["id"]} feed reestablished')
                     frame_ok = True
+                    # if the crop option is set, draw a rectangle to show the crop area
+                    if self.crop:
+                        x, y, w, h = self.crop
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
+                    if self.tempcrop:
+                        x, y, w, h = self.tempcrop
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (127, 127, 255), 3)
                     imgvwr.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(frame, frame.shape[1], frame.shape[0], QtGui.QImage.Format_RGB888).rgbSwapped()))
-                else:
-                    if frame_ok:
-                        self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
+                elif frame_ok:
+                    self.logger.warning(f'Camera {camcfg["id"]} feed interrupted - no data received')
                     frame_ok = False
             except cv2.error:
                 self.logger.warning(f'Camera {camcfg["id"]} feed unavailable - cv2 error')
