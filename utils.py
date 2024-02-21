@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
 from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow, QLabel
+from PyQt5 import Qt
 import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 from tensorflow import keras, saved_model, convert_to_tensor, newaxis, lite
