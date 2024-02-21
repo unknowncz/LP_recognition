@@ -640,7 +640,7 @@ class Camera(QtWidgets.QWidget):
         # # |                                                 |
         # # |   [Delete camera]                               |
         # # |   empty line                                    |
-        # # |   [Live feed]                 [Reset] [Apply]   |
+        # # |   [Live feed] [Crop]          [Reset] [Apply]   |
         # # |                                                 |
         # # |-------------------------------------------------|
 
@@ -692,6 +692,11 @@ class Camera(QtWidgets.QWidget):
         cfg = {"protocol":"rtsp", "port":554, "login":"admin", "password":"admin", "ip":"127.0.0.1", "id":self.id}
         cfg |= {k:v for k, v in self.config.items(f'CAM_{self.id}')}
         btn = QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop())
+        btn.setMinimumWidth(75)
+        layout.addWidget(btn)
+        btn = QtWidgets.QPushButton("Crop", clicked=lambda: self.manager.feedmgr.start(cfg, True)
+                                    if self.manager.feedmgr.thread is None else
+                                    (self.manager.feedmgr.stop(), self.config.set(f'CAM_{self.id}','crop',f'{self.manager.feedmgr.crop[:]}'.replace(',','') if hasattr(self.manager.feedmgr, 'crop') else '')))
         btn.setMinimumWidth(75)
         layout.addWidget(btn)
         layout.addStretch()
