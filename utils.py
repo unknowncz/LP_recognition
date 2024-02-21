@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 from multiprocessing import Queue
-from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow
-import PyQt5.QtWidgets as QtWidgets
+from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow, QLabel
+from PyQt5 import Qt
 import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 from tensorflow import keras, saved_model, convert_to_tensor, newaxis, lite
@@ -131,11 +131,12 @@ class FeedManager:
         self.logger = logger
         self.stop_feed = False
 
-    def start(self, camcfg:dict):
+    def start(self, camcfg:dict, crop=False):
         """Starts the live feed for the camera
 
         Args:
             camcfg (dict): Camera configuration dictionary
+            crop (bool): Enable camera image cropping feature
         """
         # stop the feed if it is already running this would cause issues if the thread is not stopped before starting a new one
         if self.thread:
@@ -154,11 +155,12 @@ class FeedManager:
         self.stop_feed = True
         self.logger.info('Camera feed stopped')
 
-    def livefeed_thread(self, camcfg:dict):
+    def livefeed_thread(self, camcfg:dict, crop=False):
         """Live feed thread function. Opens the live feed for the camera and displays it in a window.
 
         Args:
             camcfg (dict): Camera configuration dictionary
+            crop (bool): Enable camera image cropping feature
         """
         # re-implement the livefeed_thread function for linux (use qt as opencv-headless is not available)
         cap = cv2.VideoCapture('{protocol}://{login}:{password}@{ip}:{port}'.format(**camcfg))
