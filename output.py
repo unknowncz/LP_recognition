@@ -4,7 +4,7 @@ import threading
 
 SELFDIR = os.path.abspath(f'{__file__}/..')
 
-from src.OPi import OPiTools
+from .src.OPi import OPiTools
 
 # time in seconds
 TRIGGER_TIME = 3

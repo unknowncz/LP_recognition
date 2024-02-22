@@ -9,8 +9,8 @@ import configparser
 import time
 import os
 
-import utils
-import dbmgr
+from . import utils, dbmgr
+
 
 SELFDIR = os.path.abspath(f'{__file__}/..')
 

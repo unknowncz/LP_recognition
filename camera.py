@@ -5,8 +5,9 @@ from logging.handlers import QueueHandler
 import traceback
 import time
 
-import utils
+from . import utils
 
+# Constants
 NUM_RETRIES = 5
 RETRY_INTERVAL = 60
 

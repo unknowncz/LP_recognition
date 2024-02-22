@@ -25,12 +25,8 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
 
-import utils
+from . import utils, worker, camera, gui, dbmgr
 
-import worker
-import camera
-import gui
-import dbmgr
 
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
