@@ -9,10 +9,7 @@ import configparser
 import time
 import os
 
-from . import utils, dbmgr
-
-
-SELFDIR = os.path.abspath(f'{__file__}/..')
+from . import utils, dbmgr, SELFDIR
 
 class GUImgr:
     """GUI manager class for the main window

@@ -2,8 +2,6 @@ import os
 import time
 import threading
 
-SELFDIR = os.path.abspath(f'{__file__}/..')
-
 from .src.OPi import OPiTools
 
 # time in seconds

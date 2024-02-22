@@ -10,9 +10,8 @@ if __name__ == "__main__":
     import time
 
 OCR = paddleocr.PaddleOCR(lang='en', use_angle_cls=False)
-SELFDIR = os.path.abspath(f'{__file__}/..')
 
-from . import utils
+from . import utils, SELFDIR
 
 
 class Worker:

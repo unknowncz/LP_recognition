@@ -5,28 +5,15 @@ import logging
 from logging.handlers import QueueHandler, QueueListener
 from time import time, sleep
 import os
+from . import utils, worker, camera, gui, dbmgr, logger, SELFDIR
 
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
-
-SELFDIR = os.path.abspath(f'{__file__}/..')
 
 # TODO:
 #  - fix manual override (broken due to pickeling of entire taskManager object not being possible anymore, at least on windows?)
 #  - above fixed?
 #  - update todo regularly
-
-logger = mp.get_logger()
-logger.addHandler(logging.StreamHandler(stdout))
-if __name__ == "__main__":
-    # logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s")
-
-    logger.addHandler(logging.FileHandler(f"{SELFDIR}/log", mode='w'))
-    logger.setLevel(logging.INFO)
-
-
-from . import utils, worker, camera, gui, dbmgr
-
 
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
