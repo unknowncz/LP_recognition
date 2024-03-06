@@ -7,15 +7,15 @@ from multiprocessing import Queue
 from sys import stdout
 import configparser
 import time
-import os
+import flask, flask_login
 
 from . import utils, dbmgr, SELFDIR
 
-class GUImgr:
+class GUImgr_Qt:
     """GUI manager class for the main window
     """
     def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), overridequeue=Queue()):
-        """Initialize the class and the GUI
+        """Initialize the class and the GUI using PyQt5
 
         Args:
             guiQueue (Queue, optional): Logging queue for multiprocess communication. Defaults to None.
@@ -609,7 +609,7 @@ class GUImgr:
 class Camera(QtWidgets.QWidget):
     """Helper class to manage the camera settings and controls
     """
-    def __init__(self, config:configparser.ConfigParser, id:int, manager:GUImgr, button:QtWidgets.QPushButton):
+    def __init__(self, config:configparser.ConfigParser, id:int, manager:GUImgr_Qt, button:QtWidgets.QPushButton):
         """Create a new camera object
 
         Args:
@@ -688,7 +688,16 @@ class Camera(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
         cfg = {"protocol":"rtsp", "port":554, "login":"admin", "password":"admin", "ip":"127.0.0.1", "id":self.id}
         cfg |= {k:v for k, v in self.config.items(f'CAM_{self.id}')}
-        btn = QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg) if self.manager.feedmgr.thread is None else self.manager.feedmgr.stop())
+        btn = QtWidgets.QPushButton("Live feed", clicked=lambda: self.manager.feedmgr.start(cfg)
+                                            if self.manager.feedmgr.thread is None
+                                            else self.manager.feedmgr.stop())
+        btn.setMinimumWidth(75)
+        layout.addWidget(btn)
+        btn = QtWidgets.QPushButton("Crop", clicked=lambda: self.manager.feedmgr.start(cfg, True)
+                                        if self.manager.feedmgr.thread is None else
+                                        (self.manager.feedmgr.stop(), self.config.set(f'CAM_{self.id}', "crop", self.manager.feedmgr.crop)
+                                            if hasattr(self.manager.feedmgr, "crop")
+                                            else self.config.set(f'CAM_{self.id}', "crop", "")))
         btn.setMinimumWidth(75)
         layout.addWidget(btn)
         layout.addStretch()

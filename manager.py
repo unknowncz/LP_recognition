@@ -10,6 +10,8 @@ from . import utils, worker, camera, gui, dbmgr, logger, SELFDIR
 if __name__ == "__main__":
     mp.set_start_method('fork') if os.name == 'posix' else mp.set_start_method('spawn')
 
+flags = utils.Flags()
+
 # TODO:
 #  - fix manual override (broken due to pickeling of entire taskManager object not being possible anymore, at least on windows?)
 #  - above fixed?
@@ -29,6 +31,8 @@ class taskDistributor:
         self.config = config
         self.logger = logger
         self.loggerQueue = mp.Queue()
+
+        self.flags = utils.Flags(int(flags.flags))
 
         self.mpmanager = mp.Manager()
         if inputQueue is None:
@@ -55,8 +59,9 @@ class taskDistributor:
         self.successCallback = successCallback
 
         self.guiQueue = mp.Queue()
-        self.gui = mp.Process(target=gui.GUImgr, args=(self.guiQueue, self.dbmgr, self.nextautopass))
-        self.gui.start()
+        if self.flags.get_flag(flags.Types.TYPE_GUI) == flags.Flag.FLAG_GUI_QT:
+            self.gui = mp.Process(target=gui.GUImgr_Qt, args=(self.guiQueue, self.dbmgr, self.nextautopass))
+            self.gui.start()
 
         self.logger.addHandler(QueueHandler(self.guiQueue))
 
@@ -78,7 +83,7 @@ class taskDistributor:
     def distribute(self):
         """Will check for new tasks and assign them to workers. Needs to be called in a loop.
         """
-        if self.gui.exitcode is not None:
+        if hasattr(self, "gui") and self.gui.exitcode is not None:
             self.logger.info("GUI closed, exiting")
             self.kill()
             exit(0)

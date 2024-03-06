@@ -12,6 +12,7 @@ import logging
 import numpy as np
 import cv2
 from time import time
+import secrets
 
 
 @dataclass
@@ -258,6 +259,26 @@ class FeedManager:
         window.close()
         self.thread = None
 
+class Flags:
+    class Types:
+        TYPE_GUI = 0
+
+    class Flag:
+        FLAG_GUI_QT = 0
+        FLAG_GUI_WEB = 1
+        FLAG_GUI_NONE = 2
+
+    def __init__(self, initial_state:int=0) -> None:
+        self.flags = initial_state
+
+    def get_flag(self, flag_type) -> bool:
+        return int(f'{self.flags:0>15}'[flag_type])
+
+    def set_flag(self, flag_type, flag) -> None:
+        fl = f'{self.flags:0>15}'.split()
+        fl[flag_type] = str(flag)[-1]
+        self.flags = int(''.join(fl))
+
 
 def crop_image(img, detections, threshold=0.5):
     """Crops the image to the bounding box of the detected license plate.
@@ -295,3 +316,14 @@ def joinpredictions(task:Task):
     # calculate the bounding box of the license plate from the bounding boxes of the different predictions
     bbox = [min([pred[0][0] for pred in task.data]), min([pred[0][1] for pred in task.data]), max([pred[0][2] for pred in task.data]), max([pred[0][3] for pred in task.data])]
     return Task(task.id, data=[bbox, (text, conf)])
+
+def generateSecretKey(length:int=16):
+    """Generates a random secret key
+
+    Args:
+        length (int, optional): Length of the secret key. Defaults to 16.
+
+    Returns:
+        str: Secret key
+    """
+    return secrets.token_urlsafe(length)

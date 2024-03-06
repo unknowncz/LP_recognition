@@ -2,3 +2,4 @@
 output/model_final.pth
 log
 __pycache__
+src/OPi/__pycache__
