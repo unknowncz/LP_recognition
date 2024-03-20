@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="{{url_for('static', filename='styles/index.css')}}">
+    </head>
+    <body>
+        <span id="mySidenav" class="sidenav">
+            <a href="/cameras">Camera manager</a>
+            <a href="/database">Database manager</a>
+            <a href="/override">Manual Override</a>
+            <div>&ZeroWidthSpace;</div>
+            <a href="/settings">Settings</a>
+            <a href="/logout">Log Out</a>
+        </span>
+        <span id="logContainer"></span>
+        <script src="{{url_for('static', filename='scripts/index.js')}}"></script>
+    </body>
+</html>

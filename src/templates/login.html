@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="{{url_for('static', filename='styles/login.css')}}">
+    </head>
+    <body>
+        <div class="container">
+            <form id="login" action="javascript://do_login()">
+                <input type="text" placeholder="Username" name="username" required />
+                <input type="password" placeholder="Password" name="password" required />
+                <input type="text" value="{{request.args.next}}" name="next" hidden />
+                <input type="submit" name="submit" value="Login"/>
+            </form>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+        <script src="{{url_for('static', filename='scripts/login.js')}}"></script>
+    </body>
+</html>

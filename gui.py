@@ -7,7 +7,11 @@ from multiprocessing import Queue
 from sys import stdout
 import configparser
 import time
-import flask, flask_login
+import flask, flask_login, flask_socketio
+import bcrypt
+import datetime
+import os
+import threading
 
 from . import utils, dbmgr, SELFDIR
 
@@ -159,7 +163,7 @@ class GUImgr_Qt:
         # add a handler for the logger to write to the text box
         if guiQueue is not None:
             meta = self.loggerout.metaObject()
-            handler = utils.LoggerOutput(guiQueue, reciever_meta=meta, reciever=self.loggerout, formatter=logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s"))
+            handler = utils.LoggerOutput_Qt(guiQueue, reciever_meta=meta, reciever=self.loggerout, formatter=logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s"))
             listener = QueueListener(guiQueue, handler)
             listener.start()
             self.logger.addHandler(QueueHandler(guiQueue))
@@ -215,7 +219,7 @@ class GUImgr_Qt:
         self.cameras = []
         for i in range(int(self.config['GENERAL']['num_cameras'])):
             # add a camera for each camera in the config file
-            self.cameras.append(Camera(self.config, i, self, self.cambuttons[i]))
+            self.cameras.append(CameraWidget(self.config, i, self, self.cambuttons[i]))
             self.camerawidget.addWidget(self.cameras[-1])
         self.camerawidget.setCurrentIndex(0)
 
@@ -466,7 +470,7 @@ class GUImgr_Qt:
         """Apply the settings to the program
         """
         # apply the settings to the program
-        with open(f'{SELFDIR}/src/stylesheet/style{"-darkmode" if self.config["USER"]["darkmode"] == "True, bool" else ""}.qss', 'r') as f:
+        with open(f'{SELFDIR}/src/static/Qt/style{"-darkmode" if self.config["USER"]["darkmode"] == "True, bool" else ""}.qss', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -505,7 +509,7 @@ class GUImgr_Qt:
         # create a new camera object
         self.cambuttons.insert(-2, QtWidgets.QPushButton(f'Camera {str(int(self.config["GENERAL"]["num_cameras"])-1)}'))
         self.cambutton_layout.insertWidget(len(self.cambuttons)-3, self.cambuttons[-3])
-        self.cameras.append(Camera(self.config, int(self.config["GENERAL"]["num_cameras"])-1, self, self.cambuttons[-3]))
+        self.cameras.append(CameraWidget(self.config, int(self.config["GENERAL"]["num_cameras"])-1, self, self.cambuttons[-3]))
         self.camerawidget.addWidget(self.cameras[-1])
         self.camerawidget.setCurrentIndex(len(self.cameras))
         # apply the new camera config
@@ -606,7 +610,7 @@ class GUImgr_Qt:
         self.overridequeue.put(time.time())
 
 
-class Camera(QtWidgets.QWidget):
+class CameraWidget(QtWidgets.QWidget):
     """Helper class to manage the camera settings and controls
     """
     def __init__(self, config:configparser.ConfigParser, id:int, manager:GUImgr_Qt, button:QtWidgets.QPushButton):
@@ -736,7 +740,142 @@ class Camera(QtWidgets.QWidget):
         self.title.setText(f"Camera {id}")
         self.button.clicked.connect(lambda: self.manager.camdetails(self.id))
 
+class GUImgr_Web:
+    """GUI manager class for the web UI
+    """
+    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), overridequeue=Queue()):
+        """Initialize the class and the GUI using Flask
+
+        Args:
+            guiQueue (Queue, optional): Logging queue for multiprocess communication. Defaults to None.
+            db (dbmgr.DatabaseHandler, optional): Database handler for easier access to data and for easier overrides. Defaults to dbmgr.DatabaseHandler(f'{__file__}\..\lp.csv').
+            mgr (manager.taskDistributor, optional): Parent class for access to its variables. Defaults to None.
+        """
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        self.app = flask.Flask(__name__)
+        self.config = configparser.ConfigParser()
+        self.config.read(f'{SELFDIR}/config.ini')
+        self.config.add_section('WEB') if not self.config.has_section('WEB') else None
+        self.secret_key = self.config['WEB']['secret_key'] if self.config.has_option('WEB', "secret_key") else None
+        if self.secret_key is None:
+            self.secret_key = utils.generateSecretKey()
+            self.config.set('WEB', 'secret_key', self.secret_key)
+            with open(f'{SELFDIR}/config.ini', 'w') as f:
+                self.config.write(f)
+        self.app.secret_key = self.secret_key
+        #self.app.config['SESSION_TYPE'] = 'filesystem'
+        self.app.template_folder = os.path.join(SELFDIR, 'src/templates')
+        self.app.static_folder = os.path.join(SELFDIR, 'src/static/web')
+        self.DBmgr = db
+        self.overridequeue = overridequeue
+
+        self.app.root_path = os.path.join(SELFDIR, 'src')
+
+        self.loginManager = flask_login.LoginManager(self.app)
+        #self.loginManager.init_app(self.app)
+        self.loginManager.login_view = "login"
+        self.loginManager.user_loader(lambda x: users.get(x, None))
+        #self.loginManager.user_loader(User.get)
+
+        self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True)
+        self.socketThread = threading.Thread(target=self.socketio.run, args=(self.app, ), kwargs={"port":5001})
+        self.socketThread.start()
+
+        def redirect_dest(fallback):
+            dest = flask.request.args.get('next')
+            try:
+                dest_url = flask.url_for(dest)
+            except:
+                return flask.redirect(fallback)
+            return flask.redirect(dest_url)
+
+        @self.app.route('/')
+        @flask_login.login_required
+        def index():
+            return flask.render_template('index.html')
+
+        @self.app.route('/login', methods=['GET', 'POST'])
+        def login():
+            if flask_login.current_user.is_authenticated:
+                return redirect_dest(flask.url_for('index'))
+            if 'username' in flask.request.args.keys() and 'password' in flask.request.args.keys():
+                username = flask.request.args['username']
+                password = flask.request.args['password']
+                if username in users.keys() and users.get(username, None).password == password:
+                    user = users.get(username)
+                    result = flask_login.login_user(user, True, duration=datetime.timedelta(hours=6))
+                    return redirect_dest('/')
+            return flask.render_template('login.html')
+        #flask_login.login_url = '/login'
+
+        @self.app.route('/logout')
+        @flask_login.login_required
+        def logout():
+            flask_login.logout_user()
+            return redirect_dest('/login')
+
+        @self.app.route('/salt')
+        def salt():
+            username = flask.request.args['username']
+            if username in users.keys():
+                return users.get(username).salt
+            return bcrypt.gensalt().decode('utf-8')
+
+        @self.app.route('/cameras')
+        @flask_login.login_required
+        def cameramanager():
+            return "Camera Manager"
+
+        @self.app.route('/database')
+        @flask_login.login_required
+        def dbmanager():
+            return "DB Manager"
+
+        @self.app.route('/override')
+        @flask_login.login_required
+        def manualoverride():
+            self.overridequeue.put(time.time())
+            return flask.redirect('/')
+
+        @self.app.route('/settings')
+        @flask_login.login_required
+        def settings():
+            return "Settings"
+        
+        @self.socketio.on('connect')
+        #@flask_login.login_required
+        def on_connect(*_):
+            self.logger.info('Client connected', flask.request.sid)
+            self.socketio.send("welcome to hell")
+
+        self.logger.addHandler(utils.LoggerOutput_Web(self.logger, self.socketio.send, logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s")))
+
+        self.logger.info("Web server started")
+        try:
+            self.app.run(port=5000)#debug=True)
+        except KeyboardInterrupt:
+            self.socketio.stop()
+
+class User(flask_login.UserMixin):
+    """User class for the web UI
+    """
+    def __init__(self, name, password, salt=None):
+        self.id = name
+        self.password = password
+        self.salt = salt if salt is not None else bcrypt.gensalt().decode('utf-8')
+
+    def __repr__(self):
+        return f"{self.id}"
+
+    @staticmethod
+    def get(id):
+        return users.get(id)
+
+
+users = {'admin': User('admin', '$2b$12$yQc4uoKQgHKW3wFuQbqHHOP/z9aMGDB14IYoP8jHOKyVoEp0jikm2', '$2b$12$yQc4uoKQgHKW3wFuQbqHHO')}
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s — %(levelname)s — %(message)s", level=logging.DEBUG)
-    gui = GUImgr()
+    #users = {'admin': {'password': 'password'}}
+    gui = GUImgr_Web()

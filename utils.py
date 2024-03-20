@@ -23,10 +23,10 @@ class Task:
     data: Any
 
 # create a stream for the logger to output to the text box
-class LoggerOutput(QueueHandler):
+class LoggerOutput_Qt(QueueHandler):
     """A handler class which writes logging records, appropriately formatted, to a QTextEdit
     """
-    def __init__(self, queue:Queue=None, *args, reciever_meta:QtCore.QMetaObject, reciever:QTextEdit, formatter:logging.Formatter, **kwargs):
+    def __init__(self, queue:Queue, *args, reciever_meta:QtCore.QMetaObject, reciever:QTextEdit, formatter:logging.Formatter, **kwargs):
         """Initialize the class.
 
         Args:
@@ -48,6 +48,15 @@ class LoggerOutput(QueueHandler):
             record (logging.LogRecord): LogRecord to be processed
         """
         self.reciever_meta.invokeMethod(self.reciever, 'append', QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.formatter.format(record)))
+
+class LoggerOutput_Web(QueueHandler):
+    def __init__(self, queue:Queue, callback: Any, formatter: logging.Formatter, *args, **kwargs):
+        super().__init__(queue)
+        self.callback = callback
+        self.formatter = formatter
+
+    def emit(self, record: logging.LogRecord):
+        self.callback(self.formatter.format(record))
 
 class Detector:
     """Wrapper detector class for the Tensorflow model
@@ -272,7 +281,7 @@ class Flags:
         self.flags = initial_state
 
     def get_flag(self, flag_type) -> bool:
-        return int(f'{self.flags:0>15}'[flag_type])
+        return int(f'{self.flags:0>15}'[-flag_type-1])
 
     def set_flag(self, flag_type, flag) -> None:
         fl = f'{self.flags:0>15}'.split()

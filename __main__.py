@@ -47,9 +47,12 @@ def main():
 
     if getattr(args, "ui_type") == "web":
         manager.logger.warn("Web-based UI not yet implemented. Defaulting to Qt UI")
-        setattr(args, "ui_type", "qt")
+        #setattr(args, "ui_type", "qt")
 
-    flag = ["qt", "web", "none"].index(args.ui_type)
+    try:
+        flag = ["qt", "web", "none"].index(args.ui_type)
+    except ValueError:
+        flag = manager.flags.Flag.FLAG_GUI_QT
     manager.flags.set_flag(manager.flags.Types.TYPE_GUI, flag)
 
     config = ConfigParser()
