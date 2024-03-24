@@ -5,10 +5,10 @@ from configparser import ConfigParser
 from time import sleep
 import threading
 
-from . import SELFDIR
+from . import SELFDIR, formatter
 
 parser = argparse.ArgumentParser(description="""License Plate Recognition Tools""")
-parser.add_argument("-l", "--log", type=str, default=f"{SELFDIR}/log", help="Path to the log file")
+parser.add_argument("-l", "--log", type=str, default='', help="Path to the log file")
 parser.add_argument("-d", "--desktop", action="store_true", help="Disable GPIO control. This option is useful for desktop environments where GPIO is not present. Default is False.")
 parser.add_argument("-c", "--config", type=str, default=os.path.join(SELFDIR, "config.ini"), help="Path to the configuration file. Default is config.ini in the module directory.")
 parser.add_argument("--ui-type", type=str.lower, choices=["qt", "web", "none"], default="qt", help="""
@@ -37,16 +37,19 @@ def unblock(f):
     threading.Thread(target=wait_for, args=(f,), daemon=True).start()
 
 def main():
-    if not os.path.exists(os.path.dirname(args.log)) or os.access(args.log, os.W_OK):
-        manager.logger.error("Provided log filepath is invalid or read-only. Defaulting to module directory")
-        args.log = os.path.join(SELFDIR, "log")
-    manager.logger.addHandler(logging.FileHandler(os.path.abspath(args.log), mode='w'))
+    if args.log is not '' and os.path.exists(os.path.dirname(args.log)) or os.access(args.log, os.W_OK):
+        handler = logging.FileHandler(os.path.abspath(args.log), mode='w')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    else:
+        logger.error("Provided log filepath is invalid or read-only. Logging only to module directory")
+        #args.log = os.path.join(SELFDIR, "log")
 
     if args.desktop:
-        manager.logger.info("Desktop mode enabled. GPIO control is disabled.")
+        logger.info("Desktop mode enabled. GPIO control is disabled.")
 
     if getattr(args, "ui_type") == "web":
-        manager.logger.warn("Web-based UI not yet implemented. Defaulting to Qt UI")
+        logger.warn("Web-based UI not yet implemented. Defaulting to Qt UI")
         #setattr(args, "ui_type", "qt")
 
     try:

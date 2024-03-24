@@ -25,7 +25,7 @@ class Camera:
         """
         # add logging and logging queue
         self.logger = get_logger()
-        self.logger.setLevel(logging.INFO)
+        #self.logger.setLevel(logging.INFO)
         self.logger.addHandler(QueueHandler(loggerQueue))
 
         self.cfg = cfg
@@ -51,7 +51,7 @@ class Camera:
             try:
                 ret ,_= self._vcap.read()
                 if not ret:
-                    self.logger.critical(f"Failed to connect to camera {self.cfg['id']}, attempt: {attempt+1}")
+                    self.logger.warn(f"Failed to connect to camera {self.cfg['id']}, attempt: {attempt+1}")
                     attempt += 1
                     time.sleep(RETRY_INTERVAL)
                     continue

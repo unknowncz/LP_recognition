@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Home</title>
+        <link rel="stylesheet" href="{{url_for('static', filename='styles/cameras.css')}}">
+    </head>
+    <body>
+        <span id="sidenav" class="sidenav">
+            {{camerahtml|safe}}
+            <div>&ZeroWidthSpace;</div>
+            <a href="/">Back</a>
+        </span>
+        <span id="main">
+            <h1> Select a camera for configuration </h1>
+        </span>
+        <script src="{{url_for('static', filename='scripts/cameras.js')}}"></script>
+    </body>
+</html>

@@ -169,7 +169,7 @@ class GUImgr_Qt:
             listener.start()
             self.logger.addHandler(QueueHandler(guiQueue))
 
-        self.logger.addHandler(logging.StreamHandler(stdout))
+        #self.logger.addHandler(logging.StreamHandler(stdout))
         self.logger.info("GUI started")
 
 # ---------------------------- CAMERA MANAGER LAYOUT --------------------------------
@@ -780,7 +780,7 @@ class GUImgr_Web:
         self.loginManager.user_loader(lambda x: users.get(x, None))
         #self.loginManager.user_loader(User.get)
 
-        self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True)
+        self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True, manage_session=True, ping_timeout=10, ping_interval=5, cors_allowed_origins='*')
 
         def redirect_dest(fallback):
             dest = flask.request.args.get('next')
@@ -825,7 +825,48 @@ class GUImgr_Web:
         @self.app.route('/cameras')
         @flask_login.login_required
         def cameramanager():
-            return "Camera Manager"
+            if 'add' in flask.request.args.keys():
+                self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])+1)
+                self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])-1}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin', 'Protocol':'rtsp'}
+                with open(f'{SELFDIR}/config.ini', 'w') as f:
+                    self.config.write(f)
+                return 200, 'OK'
+            if 'delete' in flask.request.args.keys():
+                camid = int(flask.request.args['delete'])
+                self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
+                for i in range(camid, int(self.config['GENERAL']['num_cameras'])):
+                    self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
+                self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
+                with open(f'{SELFDIR}/config.ini', 'w') as f:
+                    self.config.write(f)
+                return 200, 'OK'
+            if 'apply' in flask.request.args.keys():
+                camid = int(flask.request.args['apply'])
+                for i in ['IP', 'Port', 'Login', 'Password', 'Protocol']:
+                    try:
+                        self.config[f'CAM_{camid}'][i] = flask.request.args[i]
+                        return 200, 'OK'
+                    except KeyError:
+                        return flask.abort(400)
+
+                with open(f'{SELFDIR}/config.ini', 'w') as f:
+                    self.config.write(f)
+                return 200, 'OK'
+            if 'config' in flask.request.args.keys():
+                camid = int(flask.request.args['config'])
+                cfg = {'ip':'127.0.0.1', 'port':554, 'login':'admin', 'password':'admin', 'protocol':'rtsp'}
+                try:
+                    cfg |= {k:v for k, v in self.config.items(f'CAM_{camid}')}
+                except KeyError:
+                    pass
+                return flask.render_template('cameraconfig.html', id=str(camid), **cfg)
+
+            num_cameras = int(self.config['GENERAL']['num_cameras'])
+            camerahtml = ""
+            for i in range(num_cameras):
+                camerahtml += f"<a>Camera {i}</a>"
+            camerahtml += "<a>Add Camera</a>"
+            return flask.render_template('cameras.html', camerahtml=camerahtml)
 
         @self.app.route('/database')
         @flask_login.login_required
@@ -842,28 +883,41 @@ class GUImgr_Web:
         @flask_login.login_required
         def settings():
             return "Settings"
-        
-        @self.socketio.on('connect', namespace='/test')
-        #@flask_login.login_required
-        def on_connect():
-            self.logger.info('Client connected', flask.request.sid)
-            self.socketio.send("welcome to hell")
 
-        @self.socketio.on('message', namespace='/test')
-        def on_message(json):
-            self.logger.info('recieved: ' + str(json))
+        @self.socketio.event
+        @flask_login.login_required
+        def connect():
+            self.logger.debug('Client connected.')
+            file_log_handler = [*filter(lambda x:isinstance(x, logging.FileHandler), self.logger.handlers)]
+            with open(file_log_handler[0].baseFilename, 'r') as f:
+                for line in f:
+                    try:
+                        t, l, m = line.split(' | ')
+                        t, l, m = t.strip(), l.strip(), m.strip()
+                        self.socketio.send({
+                                                'time':t,
+                                                'level':l,
+                                                'message':m,
+                                                'malformed':False
+                                            }, json=True)
+                    except ValueError:
+                        self.socketio.send({
+                                                'message':line.strip(),
+                                                'malformed':True
+                                            }, json=True)
 
-        self.logger.addHandler(utils.LoggerOutput_Web(socketio=self.socketio, level=logging.INFO))
+        @self.socketio.event
+        def disconnect():
+            self.logger.debug('Client disconnected')
 
-        #self.socketThread = threading.Thread(target=self.socketio.run, args=(self.app, ), kwargs={"port":5001})
-        #self.socketThread.start()
-        self.socketio.run(self.app)
+        #self.logger.addHandler(utils.LoggerOutput_Web(socketio=self.socketio, level=logging.INFO))
 
         self.logger.info("Web server started")
         try:
-            self.app.run(port=5000)#debug=True)
+            self.socketio.run(self.app, port=5000)
         except KeyboardInterrupt:
-            self.socketio.stop()
+            pass
+        self.logger.info("Web server stopped")
 
 class User(flask_login.UserMixin):
     """User class for the web UI

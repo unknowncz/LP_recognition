@@ -64,11 +64,11 @@ class LoggerOutput_Web(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         self.logs.append(self.format(record))
-        self.socketio.emit('log', self.format(record))
-    
+        self.socketio.send(self.format(record))
+
     def get_logs(self):
         return self.logs
-    
+
     def clear_logs(self):
         self.logs = []
 

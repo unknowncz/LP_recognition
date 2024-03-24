@@ -28,7 +28,7 @@ class Worker:
             autostart (bool, optional): Automatically start the main loop, if set to false, the 'run' method needs to be called separately. Defaults to False.
         """
         self.logger = get_logger()
-        self.logger.setLevel(logging.INFO)
+        #self.logger.setLevel(logging.INFO)
         #handler = QueueHandler(loggerQueue)
         #self.logger.addHandler(handler)
 
