@@ -3,7 +3,7 @@ import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 import logging
 from logging.handlers import QueueHandler, QueueListener
-from multiprocessing import Queue
+from multiprocessing import Queue, get_logger
 from sys import stdout
 import configparser
 import time
@@ -84,8 +84,9 @@ class GUImgr_Qt:
         self.centralwidgets = {'main':QtWidgets.QWidget(), 'cameramanager':QtWidgets.QWidget(), 'dbmanager':QtWidgets.QWidget(), 'settings':QtWidgets.QWidget()}
         self.centralwidgets.setdefault('main', self.centralwidgets['main'])
 
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)
+        self.logger = get_logger()
+        #self.logger = logging.getLogger()
+        #self.logger.setLevel(logging.INFO)
 
         # layout for the main window
         self.window = QtWidgets.QMainWindow()
@@ -751,8 +752,9 @@ class GUImgr_Web:
             db (dbmgr.DatabaseHandler, optional): Database handler for easier access to data and for easier overrides. Defaults to dbmgr.DatabaseHandler(f'{__file__}\..\lp.csv').
             mgr (manager.taskDistributor, optional): Parent class for access to its variables. Defaults to None.
         """
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)
+        self.logger = get_logger()
+        #self.logger = logging.getLogger()
+        #self.logger.setLevel(logging.INFO)
         self.app = flask.Flask(__name__)
         self.config = configparser.ConfigParser()
         self.config.read(f'{SELFDIR}/config.ini')
@@ -779,8 +781,6 @@ class GUImgr_Web:
         #self.loginManager.user_loader(User.get)
 
         self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True)
-        self.socketThread = threading.Thread(target=self.socketio.run, args=(self.app, ), kwargs={"port":5001})
-        self.socketThread.start()
 
         def redirect_dest(fallback):
             dest = flask.request.args.get('next')
@@ -843,13 +843,21 @@ class GUImgr_Web:
         def settings():
             return "Settings"
         
-        @self.socketio.on('connect')
+        @self.socketio.on('connect', namespace='/test')
         #@flask_login.login_required
-        def on_connect(*_):
+        def on_connect():
             self.logger.info('Client connected', flask.request.sid)
             self.socketio.send("welcome to hell")
 
-        self.logger.addHandler(utils.LoggerOutput_Web(self.logger, self.socketio.send, logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s")))
+        @self.socketio.on('message', namespace='/test')
+        def on_message(json):
+            self.logger.info('recieved: ' + str(json))
+
+        self.logger.addHandler(utils.LoggerOutput_Web(socketio=self.socketio, level=logging.INFO))
+
+        #self.socketThread = threading.Thread(target=self.socketio.run, args=(self.app, ), kwargs={"port":5001})
+        #self.socketThread.start()
+        self.socketio.run(self.app)
 
         self.logger.info("Web server started")
         try:

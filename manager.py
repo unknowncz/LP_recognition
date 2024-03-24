@@ -20,7 +20,7 @@ flags = utils.Flags()
 class taskDistributor:
     """Main class for the ANPR system. Will handle the camera and worker processes, as well as the GUI and the communication between the parts.
     """
-    def __init__(self, logger=logging.getLogger(), outputQueue=None, inputQueue=None, successCallback=lambda *_:None):
+    def __init__(self, logger=mp.get_logger(), outputQueue=None, inputQueue=None, successCallback=lambda *_:None):
         """Initialize the task distributor
 
         Args:
@@ -66,11 +66,11 @@ class taskDistributor:
             self.gui = mp.Process(target=gui.GUImgr_Web, args=(self.guiQueue, self.dbmgr, self.nextautopass))
             self.gui.start()
 
-        self.logger.addHandler(QueueHandler(self.guiQueue))
+        #self.logger.addHandler(QueueHandler(self.guiQueue))
 
         # add logging from worker and camera processes
-        self.loggerQueueListener = QueueListener(self.loggerQueue, *self.logger.handlers)
-        self.loggerQueueListener.start()
+        #self.loggerQueueListener = QueueListener(self.loggerQueue, *self.logger.handlers)
+        #self.loggerQueueListener.start()
 
         # determine which model type to use
         if config['GENERAL']['MODEL_TYPE'] in ['lite', 'tf']:
@@ -190,7 +190,7 @@ class workerHandler:
             loggerQueue (mp.Queue, optional): Queue for logging connections. Defaults to mp.Queue().
             model_type (str, optional): Model type to use. Defaults to 'tf'.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = mp.get_logger()
         # setup communication queues
         self._Qsend, self._Qrecv = mp.Queue(), mp.Queue()
         # start the worker process

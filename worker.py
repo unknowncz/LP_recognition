@@ -1,4 +1,4 @@
-from multiprocessing import Queue
+from multiprocessing import Queue, get_logger
 import numpy as np
 import cv2
 import logging
@@ -27,10 +27,10 @@ class Worker:
             detector (utils.Detector, optional): Licence Plate detector class. Defaults to utils.Detector(f'{__file__}\..\saved_model\saved_model').
             autostart (bool, optional): Automatically start the main loop, if set to false, the 'run' method needs to be called separately. Defaults to False.
         """
-        self.logger = logging.getLogger()
+        self.logger = get_logger()
         self.logger.setLevel(logging.INFO)
-        handler = QueueHandler(loggerQueue)
-        self.logger.addHandler(handler)
+        #handler = QueueHandler(loggerQueue)
+        #self.logger.addHandler(handler)
 
         pth = f"{SELFDIR}/saved_model"
         if model_pth is not None:

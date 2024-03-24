@@ -1,4 +1,4 @@
-from multiprocessing import Queue, queues, Manager
+from multiprocessing import Queue, queues, Manager, get_logger
 import cv2
 import logging
 from logging.handlers import QueueHandler
@@ -24,7 +24,7 @@ class Camera:
             autoconnect (bool, optional): Automatically connect to the camera. Defaults to False.
         """
         # add logging and logging queue
-        self.logger = logging.getLogger()
+        self.logger = get_logger()
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(QueueHandler(loggerQueue))
 

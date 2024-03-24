@@ -49,14 +49,28 @@ class LoggerOutput_Qt(QueueHandler):
         """
         self.reciever_meta.invokeMethod(self.reciever, 'append', QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.formatter.format(record)))
 
-class LoggerOutput_Web(QueueHandler):
-    def __init__(self, queue:Queue, callback: Any, formatter: logging.Formatter, *args, **kwargs):
-        super().__init__(queue)
-        self.callback = callback
-        self.formatter = formatter
+class LoggerOutput_Web(logging.Handler):
+    def __init__(self, level: int | str = 0, formatter: logging.Formatter = None, socketio=None):
+        """Initialize the class.
 
-    def emit(self, record: logging.LogRecord):
-        self.callback(self.formatter.format(record))
+        Args:
+            level (int | str, optional): Logging level. Defaults to 0.
+            formatter (logging.Formatter, optional): Logging formatter. Defaults to None.
+        """
+        super().__init__(level)
+        self.formatter = formatter or logging.Formatter()
+        self.socketio = socketio
+        self.logs = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.logs.append(self.format(record))
+        self.socketio.emit('log', self.format(record))
+    
+    def get_logs(self):
+        return self.logs
+    
+    def clear_logs(self):
+        self.logs = []
 
 class Detector:
     """Wrapper detector class for the Tensorflow model

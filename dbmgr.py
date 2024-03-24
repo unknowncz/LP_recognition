@@ -1,10 +1,10 @@
 import csv
-import logging
+from multiprocessing import get_logger
 
 class DatabaseHandler:
     """Helper class to work with data.
     """
-    def __init__(self, path:str, logger=logging.getLogger(__name__), overridedb:dict=None):
+    def __init__(self, path:str, logger=get_logger(), overridedb:dict=None):
         """Initialize the class and load the data.
 
         Args:
