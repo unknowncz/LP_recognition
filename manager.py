@@ -61,7 +61,7 @@ class taskDistributor:
 
         self.guiQueue = mp.Queue()
         if self.flags.get_flag(flags.Types.TYPE_GUI) == flags.Flag.FLAG_GUI_QT:
-            self.gui = mp.Process(target=gui.GUImgr_Qt, args=(self.dbmgr, self.guiQueue, self.nextautopass))
+            self.gui = mp.Process(target=gui.GUImgr_Qt, args=(dbcfg, self.guiQueue, self.nextautopass))
             self.gui.start()
         elif self.flags.get_flag(flags.Types.TYPE_GUI) == flags.Flag.FLAG_GUI_WEB:
             self.gui = mp.Process(target=gui.GUImgr_Web, args=(dbcfg, self.guiQueue, self.nextautopass))

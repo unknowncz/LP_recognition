@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
-from multiprocessing import Queue
+from multiprocessing import Queue, get_logger
 from PyQt5.QtWidgets import QTextEdit, QMdiSubWindow, QLabel
 from PyQt5 import Qt
 import PyQt5.QtGui as QtGui
@@ -40,6 +40,20 @@ class LoggerOutput_Qt(QueueHandler):
         self.reciever_meta = reciever_meta
         self.reciever = reciever
         self.formatter = formatter
+        file_log_handler = [*filter(lambda x:isinstance(x, logging.FileHandler), get_logger().handlers)]
+        if not len(file_log_handler):
+            return
+        with open(file_log_handler[0].baseFilename, 'r') as f:
+            for i, line in enumerate(f):
+                try:
+                    t, l, m = line.split(' | ')
+                    t, l, m = t.strip(), l.strip(), m.strip()
+                    self.emit(logging.LogRecord('logger', logging.getLevelName(l), t, i, m, None, None))
+                except ValueError:
+                    self.socketio.send({
+                                            'message':line.strip(),
+                                            'malformed':True
+                                        }, json=True)
 
     def emit(self, record:logging.LogRecord):
         """Logger emit function override.
@@ -60,17 +74,9 @@ class LoggerOutput_Web(logging.Handler):
         super().__init__(level)
         self.formatter = formatter or logging.Formatter()
         self.socketio = socketio
-        self.logs = []
 
     def emit(self, record: logging.LogRecord) -> None:
-        self.logs.append(self.format(record))
         self.socketio.send(self.format(record))
-
-    def get_logs(self):
-        return self.logs
-
-    def clear_logs(self):
-        self.logs = []
 
 class Detector:
     """Wrapper detector class for the Tensorflow model

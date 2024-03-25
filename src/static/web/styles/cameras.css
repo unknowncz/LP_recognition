@@ -64,4 +64,38 @@ body {
 
 #main div label {
     max-width: 200px;
+    min-width: 100px;
+}
+
+#main div:nth-last-child(2) button{
+    flex-grow: 1;
+}
+
+#main div input {
+    background-color: #FFFFFF;
+    padding: 2px;
+    border-style: solid;
+    border-radius: 2px;
+    flex-grow: 1;
+    border: 1px solid #BBBBBB;
+}
+
+button {
+    margin: 10px;
+    min-width: 200px;
+    background-color: #FFFFFF;
+    border: 1px solid #C2C2C2;
+    border-radius: 6px;
+    padding: 3px;
+}
+
+button:hover {
+    background-color: #FFFFFF;
+    border: 1px solid #A6A6A6;
+    cursor: pointer;
+}
+
+button:active {
+    background-color: #C5C5C5;
+    border: 1px solid #969696;
 }

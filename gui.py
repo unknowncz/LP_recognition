@@ -18,7 +18,7 @@ from . import utils, dbmgr, SELFDIR
 class GUImgr_Qt:
     """GUI manager class for the main window
     """
-    def __init__(self, db:dbmgr.DatabaseHandler, guiQueue:Queue=None, overridequeue=Queue()):
+    def __init__(self, dbconfig:dict, guiQueue:Queue=None, overridequeue=Queue()):
         """Initialize the class and the GUI using PyQt5
 
         Args:
@@ -29,7 +29,8 @@ class GUImgr_Qt:
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{SELFDIR}/config.ini')
-        self.DBmgr = db if db is not None else dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv')
+        #self.DBmgr = db if db is not None else dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv')
+        self.DBmgr = dbmgr.SQLDatabaseHandler(dbconfig)
         self.overridequeue = overridequeue
 
         hw = QtWidgets.QWidget()
@@ -257,8 +258,9 @@ class GUImgr_Qt:
         helperlayout.addWidget(helperwidget)
 
         # add each entry in the config file to the layout
-        for i, row in enumerate(self.DBmgr):
-            self.adddbrow(row[0], row[1])
+        #for i, row in enumerate(self.DBmgr):
+            #self.adddbrow(row[0], row[1])
+        # TODO: refactor this to use the SQLDatabaseHandler functions
 
         # add a vertical spacer to the end of the layout
         addrowbtn = QtWidgets.QPushButton('Add Row')
@@ -560,6 +562,7 @@ class GUImgr_Qt:
     def applydbchanges(self):
         """Apply the changes made to the database manager and save them to the .csv file
         """
+        return
         # get the text from each line edit and save it to the config file
         self.DBmgr.database = {}
         for i in range(self.dblayout.rowCount()):
@@ -574,6 +577,7 @@ class GUImgr_Qt:
     def resetdbchanges(self):
         """Reset the database manager to the values in the .csv file
         """
+        return
         for i in reversed(range(self.dblayout.count())):
             # remove all the widgets from the layout
             self.dblayout.itemAt(i).widget().deleteLater()
@@ -590,6 +594,7 @@ class GUImgr_Qt:
         Args:
             forceidx (int, optional): Force index of row to be modified rather than add a new row. Defaults to None.
         """
+        return
         # add n new line edits to the layout
         row = self.dblayout.rowCount() if forceidx is None else forceidx
         for i, text in enumerate(args):
@@ -804,8 +809,7 @@ class GUImgr_Web:
                 username = flask.request.args['username']
                 password = flask.request.args['password']
                 if self.DBmgr.check_user(username, password):
-                    user = self.DBmgr.get_user(username)
-                    result = flask_login.login_user(User(*[*self.DBmgr.get_user(username)][1:]), True, duration=datetime.timedelta(hours=6))
+                    flask_login.login_user(User(*[*self.DBmgr.get_user(username)][1:]), True, duration=datetime.timedelta(hours=6))
                     return redirect_dest('/')
             return flask.render_template('login.html')
         #flask_login.login_url = '/login'
@@ -819,8 +823,8 @@ class GUImgr_Web:
         @self.app.route('/salt')
         def salt():
             username = flask.request.args['username']
-            if user:=self.DBmgr.get_user(username) is not None:
-                return user['salt']
+            if user:=self.DBmgr.get_user(username):
+                return user[3]
             return bcrypt.gensalt().decode('utf-8')
 
         @self.app.route('/cameras')
@@ -930,7 +934,7 @@ class User(flask_login.UserMixin):
 
     def __repr__(self):
         return f"{self.id}"
-        
+
     @staticmethod
     def get(db:dbmgr.SQLDatabaseHandler, id:str):
         return db.get_user(id)
