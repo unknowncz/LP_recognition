@@ -18,7 +18,7 @@ from . import utils, dbmgr, SELFDIR
 class GUImgr_Qt:
     """GUI manager class for the main window
     """
-    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), overridequeue=Queue()):
+    def __init__(self, db:dbmgr.DatabaseHandler, guiQueue:Queue=None, overridequeue=Queue()):
         """Initialize the class and the GUI using PyQt5
 
         Args:
@@ -29,7 +29,7 @@ class GUImgr_Qt:
         self.app = QtWidgets.QApplication([])
         self.config = configparser.ConfigParser()
         self.config.read(f'{SELFDIR}/config.ini')
-        self.DBmgr = db
+        self.DBmgr = db if db is not None else dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv')
         self.overridequeue = overridequeue
 
         hw = QtWidgets.QWidget()
@@ -744,7 +744,7 @@ class CameraWidget(QtWidgets.QWidget):
 class GUImgr_Web:
     """GUI manager class for the web UI
     """
-    def __init__(self, guiQueue:Queue=None, db=dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv'), overridequeue=Queue()):
+    def __init__(self, dbparams:dict, guiQueue:Queue=None, overridequeue=Queue()):
         """Initialize the class and the GUI using Flask
 
         Args:
@@ -755,6 +755,7 @@ class GUImgr_Web:
         self.logger = get_logger()
         #self.logger = logging.getLogger()
         #self.logger.setLevel(logging.INFO)
+        self.DBmgr = dbmgr.SQLDatabaseHandler(dbparams)
         self.app = flask.Flask(__name__)
         self.config = configparser.ConfigParser()
         self.config.read(f'{SELFDIR}/config.ini')
@@ -769,7 +770,6 @@ class GUImgr_Web:
         #self.app.config['SESSION_TYPE'] = 'filesystem'
         self.app.template_folder = os.path.join(SELFDIR, 'src/templates')
         self.app.static_folder = os.path.join(SELFDIR, 'src/static/web')
-        self.DBmgr = db
         self.overridequeue = overridequeue
 
         self.app.root_path = os.path.join(SELFDIR, 'src')
@@ -777,10 +777,11 @@ class GUImgr_Web:
         self.loginManager = flask_login.LoginManager(self.app)
         #self.loginManager.init_app(self.app)
         self.loginManager.login_view = "login"
-        self.loginManager.user_loader(lambda x: users.get(x, None))
+        # self.loginManager.user_loader(lambda x: users.get(x, None))
+        self.loginManager.user_loader(lambda username: User(*[*self.DBmgr.get_user(username)][1:]))
         #self.loginManager.user_loader(User.get)
 
-        self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True, manage_session=True, ping_timeout=10, ping_interval=5, cors_allowed_origins='*')
+        self.socketio = flask_socketio.SocketIO(self.app, async_handlers=True, manage_session=True, ping_timeout=15, ping_interval=5, cors_allowed_origins='*')
 
         def redirect_dest(fallback):
             dest = flask.request.args.get('next')
@@ -802,9 +803,9 @@ class GUImgr_Web:
             if 'username' in flask.request.args.keys() and 'password' in flask.request.args.keys():
                 username = flask.request.args['username']
                 password = flask.request.args['password']
-                if username in users.keys() and users.get(username, None).password == password:
-                    user = users.get(username)
-                    result = flask_login.login_user(user, True, duration=datetime.timedelta(hours=6))
+                if self.DBmgr.check_user(username, password):
+                    user = self.DBmgr.get_user(username)
+                    result = flask_login.login_user(User(*[*self.DBmgr.get_user(username)][1:]), True, duration=datetime.timedelta(hours=6))
                     return redirect_dest('/')
             return flask.render_template('login.html')
         #flask_login.login_url = '/login'
@@ -818,8 +819,8 @@ class GUImgr_Web:
         @self.app.route('/salt')
         def salt():
             username = flask.request.args['username']
-            if username in users.keys():
-                return users.get(username).salt
+            if user:=self.DBmgr.get_user(username) is not None:
+                return user['salt']
             return bcrypt.gensalt().decode('utf-8')
 
         @self.app.route('/cameras')
@@ -929,13 +930,13 @@ class User(flask_login.UserMixin):
 
     def __repr__(self):
         return f"{self.id}"
-
+        
     @staticmethod
-    def get(id):
-        return users.get(id)
+    def get(db:dbmgr.SQLDatabaseHandler, id:str):
+        return db.get_user(id)
 
 
-users = {'admin': User('admin', '$2b$12$yQc4uoKQgHKW3wFuQbqHHOP/z9aMGDB14IYoP8jHOKyVoEp0jikm2', '$2b$12$yQc4uoKQgHKW3wFuQbqHHO')}
+#users = {'admin': User('admin', '$2b$12$yQc4uoKQgHKW3wFuQbqHHOP/z9aMGDB14IYoP8jHOKyVoEp0jikm2', '$2b$12$yQc4uoKQgHKW3wFuQbqHHO')}
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s — %(levelname)s — %(message)s", level=logging.DEBUG)

@@ -7,12 +7,12 @@
     <body>
         <span id="sidenav" class="sidenav">
             {{camerahtml|safe}}
-            <div>&ZeroWidthSpace;</div>
+            <div class="sep">&ZeroWidthSpace;</div>
             <a href="/">Back</a>
         </span>
-        <span id="main">
+        <div id="main">
             <h1> Select a camera for configuration </h1>
-        </span>
+        </div>
         <script src="{{url_for('static', filename='scripts/cameras.js')}}"></script>
     </body>
 </html>

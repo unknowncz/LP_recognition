@@ -36,7 +36,7 @@ body {
     transition: 0.3s;
 }
 
-.sidenav :not(a) {
+.sep {
     overflow: hidden;
     flex-grow: 1;
 }

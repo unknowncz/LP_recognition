@@ -38,7 +38,7 @@ body {
     cursor: pointer;
 }
 
-.sidenav :not(a) {
+.sep {
     overflow: hidden;
     flex-grow: 1;
 }
@@ -46,4 +46,22 @@ body {
     /* When you mouse over the navigation links, change their color */
 .sidenav a:hover {
     color: #f1f1f1;
+}
+
+#main {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+    margin-bottom: 20px;
+    margin-right: 20px;
+}
+
+#main div {
+    display: flex;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+#main div label {
+    max-width: 200px;
 }

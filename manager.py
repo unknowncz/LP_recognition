@@ -55,15 +55,16 @@ class taskDistributor:
             self.outQ.__setattr__(f"wkr_id{i}", None)
 
         self.nextautopass = mp.Queue()
-        self.dbmgr = dbmgr.DatabaseHandler(f"{SELFDIR}/lp.csv", logger=self.logger, overridedb=self.mpmanager.dict())
+        dbcfg = {k:v for k,v in config['DB'].items()}
+        self.dbmgr = dbmgr.SQLDatabaseHandler(dbcfg, logger=self.logger)
         self.successCallback = successCallback
 
         self.guiQueue = mp.Queue()
         if self.flags.get_flag(flags.Types.TYPE_GUI) == flags.Flag.FLAG_GUI_QT:
-            self.gui = mp.Process(target=gui.GUImgr_Qt, args=(self.guiQueue, self.dbmgr, self.nextautopass))
+            self.gui = mp.Process(target=gui.GUImgr_Qt, args=(self.dbmgr, self.guiQueue, self.nextautopass))
             self.gui.start()
         elif self.flags.get_flag(flags.Types.TYPE_GUI) == flags.Flag.FLAG_GUI_WEB:
-            self.gui = mp.Process(target=gui.GUImgr_Web, args=(self.guiQueue, self.dbmgr, self.nextautopass))
+            self.gui = mp.Process(target=gui.GUImgr_Web, args=(dbcfg, self.guiQueue, self.nextautopass))
             self.gui.start()
 
         #self.logger.addHandler(QueueHandler(self.guiQueue))
@@ -132,7 +133,8 @@ class taskDistributor:
             bbox, (lp, conf) = joinedtask.data
             # check if the LP is in the database
             self.logger.info(f"Checking LP: {lp}")
-            if (valid := next((entry for entry in self.dbmgr if entry[0] in lp), None)) != None:
+            all_lps = self.dbmgr.get_all_license_plates()
+            if (valid := next((entry for entry in all_lps if entry in lp), None)) != None:
             # if any([dbentry[0] in lp for dbentry in self.dbmgr]):
             # if lp in self.dbmgr:
             # if True:
