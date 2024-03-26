@@ -82,7 +82,8 @@ body {
 
 button {
     margin: 10px;
-    min-width: 200px;
+    /*min-width: 200px;*/
+    min-width: 75px;
     background-color: #FFFFFF;
     border: 1px solid #C2C2C2;
     border-radius: 6px;
@@ -98,4 +99,15 @@ button:hover {
 button:active {
     background-color: #C5C5C5;
     border: 1px solid #969696;
+}
+
+button:disabled {
+    background-color: #FFFFFF;
+    border: 1px solid #C2C2C2;
+}
+
+button:disabled:hover {
+    background-color: #FFFFFF;
+    border: 1px solid #C2C2C2;
+    cursor: not-allowed;
 }

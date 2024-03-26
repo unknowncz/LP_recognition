@@ -835,7 +835,7 @@ class GUImgr_Web:
                 self.config[f'CAM_{int(self.config["GENERAL"]["num_cameras"])-1}'] = {'IP':'127.0.0.1', 'Port':'554', 'Login':'admin', 'Password':'admin', 'Protocol':'rtsp'}
                 with open(f'{SELFDIR}/config.ini', 'w') as f:
                     self.config.write(f)
-                return 200, 'OK'
+                return ({'status':'success'}, 200)
             if 'delete' in flask.request.args.keys():
                 camid = int(flask.request.args['delete'])
                 self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
@@ -844,19 +844,19 @@ class GUImgr_Web:
                 self.config.remove_section(f'CAM_{int(self.config["GENERAL"]["num_cameras"])}')
                 with open(f'{SELFDIR}/config.ini', 'w') as f:
                     self.config.write(f)
-                return 200, 'OK'
+                return ({'status':'success'}, 200)
             if 'apply' in flask.request.args.keys():
                 camid = int(flask.request.args['apply'])
                 for i in ['IP', 'Port', 'Login', 'Password', 'Protocol']:
                     try:
                         self.config[f'CAM_{camid}'][i] = flask.request.args[i]
-                        return 200, 'OK'
+                        return ({'status':'success'}, 200)
                     except KeyError:
                         return flask.abort(400)
 
                 with open(f'{SELFDIR}/config.ini', 'w') as f:
                     self.config.write(f)
-                return 200, 'OK'
+                return ({'status':'success'}, 200)
             if 'config' in flask.request.args.keys():
                 camid = int(flask.request.args['config'])
                 cfg = {'ip':'127.0.0.1', 'port':554, 'login':'admin', 'password':'admin', 'protocol':'rtsp'}
@@ -869,7 +869,7 @@ class GUImgr_Web:
             num_cameras = int(self.config['GENERAL']['num_cameras'])
             camerahtml = ""
             for i in range(num_cameras):
-                camerahtml += f"<a>Camera {i}</a>"
+                camerahtml += f"<a id='{i}'>Camera {i}</a>"
             camerahtml += "<a>Add Camera</a>"
             return flask.render_template('cameras.html', camerahtml=camerahtml)
 
