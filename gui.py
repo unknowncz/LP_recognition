@@ -880,7 +880,6 @@ class GUImgr_Web:
                 query = flask.request.args['query']
                 try:
                     res = self.DBmgr.custom_query(query, [])
-                    self.logger.info(f"Query: '{query}' returned '{res}' results")
                     tuple_res = tuple(res)
                     return flask.jsonify(tuple_res)
                 except Exception as e:
