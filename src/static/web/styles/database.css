@@ -1,0 +1,36 @@
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+#controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 10px;
+}
+
+#controls * {
+    margin: 10px;
+}
+
+#query {
+    flex-grow: 1;
+}
+
+#results {
+    border: 3px solid #BBBBBB;
+    border-collapse: collapse;
+}
+
+#results tbody tr {
+    border: 2px solid #BBBBBB;
+}
+
+#results tbody tr:nth-child(even) td:nth-child(odd), #results tbody tr:nth-child(odd) td:nth-child(even) {
+    background: rgba(200, 200, 200, .5);
+}
+
+#results :is(tbody tr:nth-child(even) td:nth-child(even), tbody tr:nth-child(odd) td:nth-child(odd)) {
+    background: rgba(150, 150, 150, .5);
+}

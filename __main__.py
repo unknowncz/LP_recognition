@@ -10,7 +10,7 @@ from . import SELFDIR, formatter
 parser = argparse.ArgumentParser(description="""License Plate Recognition Tools""")
 parser.add_argument("-l", "--log", type=str, default='', help="Path to the log file")
 parser.add_argument("-d", "--desktop", action="store_true", help="Disable GPIO control. This option is useful for desktop environments where GPIO is not present. Default is False.")
-parser.add_argument("-c", "--config", type=str, default=os.path.join(SELFDIR, "config.ini"), help="Path to the configuration file. Default is config.ini in the module directory.")
+#parser.add_argument("-c", "--config", type=str, default=os.path.join(SELFDIR, "config.ini"), help="Path to the configuration file. Default is config.ini in the module directory.")
 parser.add_argument("--ui-type", type=str.lower, choices=["qt", "web", "none"], default="qt", help="""
                     Type of UI to use, 'qt' (default) - a PyQt5-based UI will be used.\r\n
                     'web' - Web UI will be used.\r\n
@@ -59,7 +59,8 @@ def main():
     manager.flags.set_flag(manager.flags.Types.TYPE_GUI, flag)
 
     config = ConfigParser()
-    config.read(args.config)
+    #config.read(args.config)
+    config.read(os.path.join(SELFDIR, "config.ini"))
     manager.config = config
     if not args.desktop:
         pins = [output.OPiTools.Pin(**pin) for pin in output.OPiTools.PINLIST]

@@ -8,6 +8,7 @@ function setupjsinterrupt(id) {
     buttonelem.children[0].addEventListener('click', function() {
         // TODO: grab arguments from the form and open a new window with the live feed
         //window.open('/cameras/live', '_blank');
+        alert('Live feed not implemented yet');
     });
     buttonelem.children[3].addEventListener('click', function() {
         setcamera(id);
@@ -15,6 +16,30 @@ function setupjsinterrupt(id) {
     buttonelem.children[4].addEventListener('click', function() {
         // send a request to the server to apply the crop
         // TODO: grab arguments from the form and send them to the server
+        elems = main.getElementsByTagName('input');
+        args = {
+            'apply' : id,
+            'ip' : elems['ip'].value,
+            'port' : elems['port'].value,
+            'login' : elems['login'].value,
+            'password' : elems['password'].value,
+            'protocol' : elems['protocol'].value
+        }
+        params = '';
+        for (let key in args) {
+            params += key + '=' + args[key] + '&';
+        }
+        xhr = new XMLHttpRequest();
+        // open a new request to the server with the arguments
+        xhr.open('GET', '/cameras?'+params, true);
+        //xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                console.log('Config applied');
+            }
+        }
+        // send the arguments to the server
+        xhr.send(JSON.stringify(args));
     });
 }
 

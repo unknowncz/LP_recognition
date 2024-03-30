@@ -849,13 +849,13 @@ class GUImgr_Web:
                 camid = int(flask.request.args['apply'])
                 for i in ['IP', 'Port', 'Login', 'Password', 'Protocol']:
                     try:
-                        self.config[f'CAM_{camid}'][i] = flask.request.args[i]
-                        return ({'status':'success'}, 200)
+                        self.config[f'CAM_{camid}'][i] = flask.request.args[i.lower()]
                     except KeyError:
                         return flask.abort(400)
 
-                with open(f'{SELFDIR}/config.ini', 'w') as f:
-                    self.config.write(f)
+                self.logger.info(f"Camera {camid} settings applied")
+
+                self.config.write(open(f'{SELFDIR}/config.ini', 'w'), True)
                 return ({'status':'success'}, 200)
             if 'config' in flask.request.args.keys():
                 camid = int(flask.request.args['config'])
@@ -876,7 +876,24 @@ class GUImgr_Web:
         @self.app.route('/database')
         @flask_login.login_required
         def dbmanager():
-            return "DB Manager"
+            if 'query' in flask.request.args.keys():
+                query = flask.request.args['query']
+                try:
+                    res = self.DBmgr.custom_query(query, [])
+                    self.logger.info(f"Query: '{query}' returned '{res}' results")
+                    tuple_res = tuple(res)
+                    return flask.jsonify(tuple_res)
+                except Exception as e:
+                    return flask.jsonify({'error':str(e)})
+            if 'table' in flask.request.args.keys():
+                table = flask.request.args['table']
+                try:
+                    res = self.DBmgr.get_table(table)
+                    return flask.jsonify(res)
+                except Exception as e:
+                    return flask.jsonify({'error':str(e)})
+
+            return flask.render_template('database.html')
 
         @self.app.route('/override')
         @flask_login.login_required

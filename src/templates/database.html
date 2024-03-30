@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Home</title>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/database.css')}}">
+    </head>
+    <body>
+        <form id="controls">
+            <select id="tableSelector">
+                <option value="query">Query results</option>
+                <option value="lp">lp</option>
+                <option value="users">users</option>
+            </select>
+            <input type="text" id="query" value="SELECT * FROM lp">
+            <input type="submit" id="submitButton" value="Execute">
+        </form>
+        <table id="results">
+            <tr>
+                <td>
+                    Submit a query or select a table to see the results here.
+                </td>
+            </tr>
+        </table>
+        <script src="{{url_for('static', filename='scripts/database.js')}}"></script>
+    </body>
+</html>
+
