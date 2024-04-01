@@ -48,13 +48,10 @@ def main():
     if args.desktop:
         logger.info("Desktop mode enabled. GPIO control is disabled.")
 
-    if getattr(args, "ui_type") == "web":
-        logger.warn("Web-based UI not yet implemented. Defaulting to Qt UI")
-        #setattr(args, "ui_type", "qt")
-
     try:
         flag = ["qt", "web", "none"].index(args.ui_type)
     except ValueError:
+        logger.error("Invalid UI type. Defaulting to Qt UI")
         flag = manager.flags.Flag.FLAG_GUI_QT
     manager.flags.set_flag(manager.flags.Types.TYPE_GUI, flag)
 
