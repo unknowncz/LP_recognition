@@ -32,6 +32,7 @@ class GUImgr_Qt:
         #self.DBmgr = db if db is not None else dbmgr.DatabaseHandler(f'{SELFDIR}/lp.csv')
         self.DBmgr = dbmgr.SQLDatabaseHandler(dbconfig)
         self.overridequeue = overridequeue
+        self.lastquery = []
 
         hw = QtWidgets.QWidget()
         hw.setLayout(QtWidgets.QVBoxLayout())
@@ -231,69 +232,63 @@ class GUImgr_Qt:
 
 # ---------------------------- DB MANAGER LAYOUT --------------------------------
         # |--------------------------------------------------|
+        # | [TableSelect] [Query                 ] [Execute] |
         # | [row 1 item 1          ][row 1 item 2          ] |
         # | [row 2 item 1          ][row 2 item 2          ] |
-        # | [row 3 item 1          ][row 3 item 2          ] |
-        # |                 add_row_button                   |
         # |                                                  |
-        # |         cancel                      apply        |
+        # |                                                  |
+        # |                                                  |
         # |                      back                        |
         # |--------------------------------------------------|
 
-        # add a vertical layout for the buttons as the first item in the layout
+        # add a vertical layout as the first item in the layout
         layout = QtWidgets.QVBoxLayout()
-        scroll = QtWidgets.QScrollArea()
+        self.dbscroll = QtWidgets.QScrollArea()
         self.dblayout = QtWidgets.QGridLayout()
         self.dblayout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
         self.dblayout.setContentsMargins(0, 0, 0, 0)
+
+        self.dbscroll.setLayout(self.dblayout)
+
+        w = QtWidgets.QLabel('Submit a query or select a table to see the results here.')
+        self.dblayout.addWidget(w)
+        w.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        w.setContentsMargins(5, 10, 5, 0)
+        self.dblayout.addWidget(QtWidgets.QWidget(), 1, 0)
         centerwidget = self.centralwidgets['dbmanager']
         centerwidget.setLayout(layout)
 
-        # apply the above code only for the width
+        # add the table select and query input as well as the execute button
+        tableselect = QtWidgets.QComboBox()
+        tableselect.addItems(['Query Results', 'lp', 'users'])
+        tableselect.currentIndexChanged.connect(lambda: self.setDBWidget(self.DBmgr.get_table(tableselect.currentText())) if tableselect.currentText() != 'Query Results' else self.setDBWidget(self.lastquery))
+        self.queryinput = QtWidgets.QLineEdit()
+        self.queryinput.setPlaceholderText('Enter a query')
+        self.queryinput.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Fixed)
 
-        helperlayout = QtWidgets.QVBoxLayout()
-        helperwidget = QtWidgets.QWidget()
-        helperwidget.setLayout(self.dblayout)
-        helperwidget.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
-        helperlayout.addWidget(helperwidget)
+        def keyPressEvent(event):
+            if event.key() == QtCore.Qt.Key.Key_Return:
+                self.setDBWidget(self.DBmgr.custom_query(self.queryinput.text(), []), query=True)
+                tableselect.setCurrentIndex(0)
+            else:
+                QtWidgets.QLineEdit.keyPressEvent(self.queryinput, event)
 
-        # add each entry in the config file to the layout
-        #for i, row in enumerate(self.DBmgr):
-            #self.adddbrow(row[0], row[1])
-        # TODO: refactor this to use the SQLDatabaseHandler functions
+        self.queryinput.keyPressEvent = keyPressEvent
+        executebtn = QtWidgets.QPushButton('Execute')
+        executebtn.clicked.connect(lambda: (self.setDBWidget(self.DBmgr.custom_query(self.queryinput.text(), []), query=True), tableselect.setCurrentIndex(0)))
 
-        # add a vertical spacer to the end of the layout
-        addrowbtn = QtWidgets.QPushButton('Add Row')
-
-        addrowbtn.clicked.connect(lambda: self.adddbrow('', ''))
-        helperlayout.addWidget(addrowbtn)
-        helperlayout.addStretch(200)
-
-        # add the cancel and apply buttons
-        cancelbtn = QtWidgets.QPushButton('Cancel')
-        applybtn = QtWidgets.QPushButton('Apply')
-        cancelbtn.setMinimumWidth(100)
-        applybtn.setMinimumWidth(100)
 
         l = QtWidgets.QHBoxLayout()
-        cancelbtn.clicked.connect(self.resetdbchanges)
-        applybtn.clicked.connect(lambda:(self.applydbchanges(), self.resetdbchanges()))
-        l.addStretch(2)
-        l.addWidget(cancelbtn)
-        l.addStretch(3)
-        l.addWidget(applybtn)
-        l.addStretch(2)
-        helperlayout.addLayout(l)
+        l.addWidget(tableselect)
+        l.addWidget(self.queryinput)
+        l.addWidget(executebtn)
+        layout.addLayout(l)
 
-        scroll.setLayout(helperlayout)
-
-        layout.addWidget(scroll)
-
+        layout.addWidget(self.dbscroll)
         # add the back button
         back_btn = QtWidgets.QPushButton('Back')
         layout.addWidget(back_btn)
-        back_btn.clicked.connect(lambda:(self.resetdbchanges(),self.resetContent()))
-
+        back_btn.clicked.connect(self.resetContent)
 
         # settings window
         # |--------------------------------------------------|
@@ -559,54 +554,35 @@ class GUImgr_Qt:
         """
         self.cw.setCurrentWidget(self.centralwidgets['dbmanager'])
 
-    def applydbchanges(self):
-        """Apply the changes made to the database manager and save them to the .csv file
-        """
-        return
-        # get the text from each line edit and save it to the config file
-        self.DBmgr.database = {}
-        for i in range(self.dblayout.rowCount()):
-            if self.dblayout.itemAtPosition(i, 0) is None:
-                continue
-            key = self.dblayout.itemAtPosition(i, 0).widget().text()
-            value = self.dblayout.itemAtPosition(i, 1).widget().text()
-            if key:
-                self.DBmgr.database[key] = value
-        self.DBmgr.save()
-
-    def resetdbchanges(self):
-        """Reset the database manager to the values in the .csv file
-        """
-        return
-        for i in reversed(range(self.dblayout.count())):
-            # remove all the widgets from the layout
-            self.dblayout.itemAt(i).widget().deleteLater()
-            self.dblayout.itemAt(i).widget().setParent(None)
-        # set the row height to 0 to remove the empty row(s)
-        for i in reversed(range(self.dblayout.rowCount())):
-            self.dblayout.setRowMinimumHeight(i, 0)
-        for idx, row in enumerate(self.DBmgr):
-            self.adddbrow(row[0], row[1], forceidx=idx)
-
-    def adddbrow(self, *args, forceidx:int=None):
-        """Add a new row to the database manager
+    def setDBWidget(self, data:list[tuple], query:bool=False):
+        """Set the data in the database widget
 
         Args:
-            forceidx (int, optional): Force index of row to be modified rather than add a new row. Defaults to None.
+            data (list[tuple]): Data to be displayed in the database widget
         """
-        return
-        # add n new line edits to the layout
-        row = self.dblayout.rowCount() if forceidx is None else forceidx
-        for i, text in enumerate(args):
-            le = QtWidgets.QLineEdit()
-            le.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Expanding)
-            le.setText(str(text))
-            le.setMaximumHeight(20)
-            le.setMinimumHeight(20)
-            # add a new row
-            self.dblayout.addWidget(le, row, i)
-            # set the text to the default value
-        self.dblayout.setRowMinimumHeight(row, 20)
+        # clear the current data
+        while self.dblayout.count():
+            item = self.dblayout.takeAt(0)
+            if widget:=item.widget():
+                widget.deleteLater()
+
+        if query:
+            self.lastquery = data
+
+        if len(data) == 0:
+            self.dblayout.addWidget(QtWidgets.QLabel('No results found'), 0, 0)
+            return
+
+        # set the data in the database widget
+        for i in range(len(data)):
+            for j in range(len(data[i])):
+                w = QtWidgets.QLabel(str(data[i][j]))
+                w.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Fixed)
+                w.setContentsMargins(5, 10, 5, 0)
+                self.dblayout.addWidget(w, i, j)
+        self.dblayout.addWidget(QtWidgets.QWidget(), len(data), 0)
+        #self.logger.info(self.dblayout.w)
+        self.dblayout.parentWidget().update()
 
 
 # ---------------------------- MANUAL OVERRIDE FUNCTION --------------------------------
