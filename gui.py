@@ -814,6 +814,10 @@ class GUImgr_Web:
                 return ({'status':'success'}, 200)
             if 'delete' in flask.request.args.keys():
                 camid = int(flask.request.args['delete'])
+                if camid >= int(self.config['GENERAL']['num_cameras']) or camid < 0:
+                    return ({'status':'failure'}, 400)
+                if int(self.config['GENERAL']['num_cameras']) == 0:
+                    return ({'status':'failure'}, 400)
                 self.config['GENERAL']['num_cameras'] = str(int(self.config['GENERAL']['num_cameras'])-1)
                 for i in range(camid, int(self.config['GENERAL']['num_cameras'])):
                     self.config[f'CAM_{i}'] = {**self.config[f'CAM_{i+1}']}
