@@ -80,3 +80,7 @@ controls.children[0].addEventListener('change', function() {
         refresh_table(table);
     }
 });
+
+document.body.children[document.body.children.length-2].addEventListener('click', function() {
+    window.location.href = '/'
+});
