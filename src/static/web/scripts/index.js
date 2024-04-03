@@ -15,6 +15,7 @@ function addMalformedLog(log) {
 }
 
 ws.on('connect', () => {
+    logs.innerHTML = ''
     console.log('Connected to server')
     ws.emit('join', 'client')
 })

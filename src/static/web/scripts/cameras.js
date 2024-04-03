@@ -2,8 +2,21 @@
 main = document.getElementById('main');
 
 function setupjsinterrupt(id) {
-    deleteelem = main.getElementsByTagName('div')[main.childElementCount-2];
+    deleteelem = main.getElementsByTagName('div')[main.childElementCount-3];
     buttonelem = main.lastChild;
+
+    deleteelem.children[0].addEventListener('click', function() {
+        xhr = new XMLHttpRequest();
+        xhr.open('GET', '/cameras?delete='+id, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                console.log('Deleted camera ' + id);
+                window.location.reload();
+            }
+        }
+        xhr.send();
+    })
+
     // [live feed] [crop (disabled)]     [separator]     [reset] [apply]
     buttonelem.children[0].addEventListener('click', function() {
         // TODO: grab arguments from the form and open a new window with the live feed
