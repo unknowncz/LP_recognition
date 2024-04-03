@@ -833,8 +833,6 @@ class GUImgr_Web:
                     except KeyError:
                         return flask.abort(400)
 
-                self.logger.info(f"Camera {camid} settings applied")
-
                 self.config.write(open(f'{SELFDIR}/config.ini', 'w'), True)
                 return ({'status':'success'}, 200)
             if 'config' in flask.request.args.keys():
