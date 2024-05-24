@@ -134,7 +134,7 @@ class taskDistributor:
             # check if the LP is in the database
             self.logger.info(f"Checking LP: {lp}")
             all_lps = self.dbmgr.get_all_license_plates()
-            if (valid := next((entry for entry in all_lps if entry in lp), None)) != None:
+            if (valid := next((entry for entry in all_lps if utils.tollerant_compare(lp, entry)<=1), None)) != None:
             # if any([dbentry[0] in lp for dbentry in self.dbmgr]):
             # if lp in self.dbmgr:
             # if True:

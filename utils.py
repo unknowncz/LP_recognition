@@ -356,3 +356,23 @@ def generateSecretKey(length:int=16):
         str: Secret key
     """
     return secrets.token_urlsafe(length)
+
+def tollerant_compare(string:str, template:str):
+    s = string.lower()
+    t = template.lower()
+    start = False
+    for _ in range(len(s)):
+        if len(t) == 0 or len(s) == 0: break
+        char, last_char = s[0], s[-1]
+        if t.startswith(char):
+            t = ''.join(t[1:])
+            s = ''.join(s[1:])
+        else:
+            start = True
+        if len(t) == 0 or len(s) == 0: break
+        if t.endswith(last_char):
+            t = ''.join(t[:-1])
+            s = ''.join(s[:-1])
+        elif start:
+            break
+    return max(len(s), len(t))
