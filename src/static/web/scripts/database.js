@@ -5,13 +5,11 @@ localStorage.removeItem('lastQueryResults');
 localStorage.setItem('lastSelectedTable', 'query');
 
 function construct_html(json) {
-    console.log(json);
     html = '';
-    console.log(Object.values(json));
     json.forEach(element => {
         html += '<tr>';
         Object.values(element).forEach(value => {
-            html += '<td>' + value + '</td>';
+            html += (element===json[0]?'<th>':'<td>') + value + (element===json[0]?'</th>':'</td>');
         });
         html += '</tr>';
     });

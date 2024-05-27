@@ -38,6 +38,14 @@ body span {
     margin: 0 20px 0 20px;
 }
 
+#results tbody th:nth-child(odd) {
+    background-color: #2060CD;
+}
+
+#results tbody th:nth-child(even) {
+    background-color: #4080FF;
+}
+
 #results tbody tr {
     border: 2px solid #BBBBBB;
 }

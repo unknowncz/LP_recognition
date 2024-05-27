@@ -94,46 +94,52 @@ class SQLDatabaseHandler:
         self._exec_none(f"UPDATE lp SET name=%s, surname=%s WHERE licence_plate=%s", [name, surname, licence_plate])
         #f"UPDATE lp SET name=%s, surname=%s WHERE licence_plate=%s", (name, surname, licence_plate))
 
-    def custom_query(self, query:str, args=[]):
-        return self._exec_n(query, args, 20)
+    def custom_query(self, query:str, args=[], header=True):
+        return self._exec_n(query, args, 20, header)
 
     def get_table(self, table:str):
-        return self._exec_n(f"SELECT * FROM {table}", [], 20)
+        return self._exec_n(f"SELECT * FROM {table}", [], 20, header=True)
         #cursor.execute(f"SELECT * FROM {table}")
 
     def __del__(self):
         self.conn.close()
         self.logger.info("Disconnected from MySQL database")
 
-    def _exec_none(self, query:str, args):
+    def _exec_none(self, query:str, args=[], header=False):
         self.logger.debug(f"Executing query {query} with args {args}")
         cursor = self.conn.cursor()
         cursor.execute(query, args)
-        self.conn.commit()
+        #self.conn.commit()
         cursor.close()
 
-    def _exec_one(self, query:str, args):
+    def _exec_one(self, query:str, args, header=False):
         self.logger.debug(f"Executing query {query} with args {args}")
         cursor = self.conn.cursor()
         cursor.execute(query, args)
         res = cursor.fetchone()
+        if header:
+            res = [[*zip(*cursor.description)][0]] + res
         cursor.close()
         return res
 
-    def _exec_n(self, query:str, args, n:int):
+    def _exec_n(self, query:str, args, n:int, header=False):
         query += " LIMIT %s"
         args.append(n)
         self.logger.debug(f"Executing query {query} with args {args}")
         cursor = self.conn.cursor()
         cursor.execute(query, args)
         res = cursor.fetchall()
+        if header:
+            res = [[*zip(*cursor.description)][0]] + res
         cursor.close()
         return res
 
-    def _exec_all(self, query:str, args):
+    def _exec_all(self, query:str, args, header=False):
         self.logger.debug(f"Executing query {query} with args {args}")
         cursor = self.conn.cursor()
         cursor.execute(query, args)
         res = cursor.fetchall()
+        if header:
+            res = [[*zip(*cursor.description)][0]] + res
         cursor.close()
         return res
