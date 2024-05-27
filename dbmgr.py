@@ -95,7 +95,11 @@ class SQLDatabaseHandler:
         #f"UPDATE lp SET name=%s, surname=%s WHERE licence_plate=%s", (name, surname, licence_plate))
 
     def custom_query(self, query:str, args=[], header=True):
-        return self._exec_n(query, args, 20, header)
+        try:
+            return self._exec_n(query, args, 20, header)
+        except Exception as e:
+            self.logger.error(f"Custom query failed: {e}")
+            return None
 
     def get_table(self, table:str):
         return self._exec_n(f"SELECT * FROM {table}", [], 20, header=True)
