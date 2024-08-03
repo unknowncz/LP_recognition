@@ -1,8 +1,5 @@
 import multiprocessing as mp
-from sys import stdout
 from configparser import ConfigParser
-import logging
-from logging.handlers import QueueHandler, QueueListener
 from time import time, sleep
 import os
 from . import utils, worker, camera, gui, dbmgr, logger, SELFDIR

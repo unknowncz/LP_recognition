@@ -1,11 +1,8 @@
 from multiprocessing import Queue, get_logger
 import numpy as np
 import cv2
-import logging
-from logging.handlers import QueueHandler
 import traceback
 import paddleocr
-import os
 if __name__ == "__main__":
     import time
 

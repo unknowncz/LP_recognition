@@ -1,8 +1,7 @@
-import os
 import time
 import threading
 
-from .src.OPi import OPiTools
+from .src import OPiTools
 
 # time in seconds
 TRIGGER_TIME = 3

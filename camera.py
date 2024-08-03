@@ -1,6 +1,5 @@
-from multiprocessing import Queue, queues, Manager, get_logger
+from multiprocessing import Queue, get_logger
 import cv2
-import logging
 from logging.handlers import QueueHandler
 import traceback
 import time
@@ -58,8 +57,8 @@ class Camera:
                 connected = True
             except:traceback.print_exc();return
         if not connected:
-            self.logger.error(f"Failed to connect to canera {self.cfg['id']}, out of retries")
-            exit()
+            self.logger.error(f"Failed to connect to camera {self.cfg['id']}, out of retries")
+            return
         if autostart:
             self.run()
 
